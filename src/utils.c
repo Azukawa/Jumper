@@ -1,4 +1,4 @@
-#include "snaker.h"
+#include "jumper.h"
 
 void backend_checker(t_rend *rend)
 {

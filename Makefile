@@ -1,4 +1,4 @@
-NAME	=	snaker
+NAME	=	jumper
 
 #compiler
 CC	=	gcc
