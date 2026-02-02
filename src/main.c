@@ -127,26 +127,36 @@ void fps_counter(int ticks_this_frame)
 	}
 }
 
-static inline t_point	update_player_velocity(t_jump *jump, t_point player_vel)
+t_point		clamp_velocity(int top_velocity, t_point velocity)
+{
+	t_point ret;
+	ret.x = ft_clamp(-top_velocity, top_velocity, velocity.x);
+	ret.y = ft_clamp(-top_velocity, top_velocity, velocity.y);
+	return (ret);
+}
+
+static inline t_point	update_player_velocity(t_jump *jump, t_point player_vel, int speed, int top_velocity)
 {
 	if(jump->k.u)
-		player_vel.y--;
+		player_vel.y-= speed;
 	if(jump->k.d)
-		player_vel.y++;
+		player_vel.y+= speed;
 	if(jump->k.l)
-		player_vel.x--;
+		player_vel.x-= speed;
 	if(jump->k.r)
-		player_vel.x++;
+		player_vel.x+= speed;
 
+	player_vel = clamp_velocity(top_velocity, player_vel);
 	return (player_vel);
 }
 
-// TODO Replace the hardcoded value of 4 by a constant. >> 5 = 32 subpixels. >> 4 = 16 subpixels
+// TODO Replace the hardcoded subpixels value with constant.
+// >> 5 = 32 subpixels. >> 4 = 16 subpixels
 static inline t_point	world_point_to_rend_point(t_point point)
 {
 	t_point ret;
-	ret.x = (point.x >> 4) + (LOGIC_W >> 1); 
-	ret.y = (point.y >> 4) + (LOGIC_H >> 1); 
+	ret.x = (point.x >> 5) + (LOGIC_W >> 1); 
+	ret.y = (point.y >> 5) + (LOGIC_H >> 1); 
 
 	return (ret);
 }
@@ -165,8 +175,10 @@ void game_logic(t_rend *rend, t_jump *jump)
 	static t_point player_vel 	= {0, 0};
 	static t_point player_pos 	= {0, 0};
 	t_point	rend_player_pos 	= {0, 0};
+	int		speed				= 3;
+	int		top_velocity		= 300;
 
-	player_vel 		= update_player_velocity(jump, player_vel);
+	player_vel 		= update_player_velocity(jump, player_vel, speed, top_velocity);
 	player_pos 		= point_add(player_pos, player_vel);
 	rend_player_pos = world_point_to_rend_point(player_pos);
 

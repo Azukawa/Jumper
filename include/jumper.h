@@ -13,8 +13,8 @@
 # include "../libSDL2/include/SDL2/SDL_mixer.h"
 # include "../libSDL2/include/SDL2/SDL.h"
 
-# define LOGIC_W 400
-# define LOGIC_H 300
+# define LOGIC_W 800
+# define LOGIC_H 600
 
 # define WIN_W 800
 # define WIN_H 600
@@ -76,5 +76,6 @@ void		draw_line(t_buffer *buf, t_point p0, t_point p1, uint32_t color);
 void		draw_circle(t_buffer *buf, t_point p, int r, uint32_t color);
 void		draw_filled_circle(t_buffer *buf, t_point p, int r, uint32_t color);
 void		draw_square(t_point a, t_point b, t_buffer *buf, int color);
+int			ft_clamp(int min, int max, int nb);
 
 #endif
