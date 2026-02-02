@@ -133,7 +133,27 @@ void fps_counter(int ticks_this_frame)
 
 void jump_logic(t_rend *rend, t_jump *jump)
 {
-	
+	static t_point player_vel = {0, 0};
+	static t_point player_pos = {0, 0};
+	t_point	rend_player_pos = {0 + (LOGIC_W >> 1), 0 + (LOGIC_H >> 1)};
+
+	if(jump->k.u)
+		player_vel.y--;
+	if(jump->k.d)
+		player_vel.y++;
+	if(jump->k.l)
+		player_vel.x--;
+	if(jump->k.r)
+		player_vel.x++;
+
+
+	player_pos.y += player_vel.y;
+	player_pos.x += player_vel.x;
+	rend_player_pos.y = (player_pos.y >> 5) + (LOGIC_H >> 1); 
+	rend_player_pos.x = (player_pos.x >> 5) + (LOGIC_W >> 1); 
+
+
+	draw_circle(rend->win_buffer, rend_player_pos, 15, 0xFFFFFFFF);	
 }
 
 static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
