@@ -1,11 +1,7 @@
 #include "jumper.h"
 
 //TODO
-//Better color handling: Perhaps color_lerp() from tail to head
-//better key press handling, only one change per press
-//better color fadeout with distance. brightness is distance / 4
 //pause button
-//change rendering modes with button
 //
 
 void	getout(const char *s)
@@ -131,12 +127,8 @@ void fps_counter(int ticks_this_frame)
 	}
 }
 
-void jump_logic(t_rend *rend, t_jump *jump)
+static inline t_point	update_player_velocity(t_jump *jump, t_point player_vel)
 {
-	static t_point player_vel = {0, 0};
-	static t_point player_pos = {0, 0};
-	t_point	rend_player_pos = {0 + (LOGIC_W >> 1), 0 + (LOGIC_H >> 1)};
-
 	if(jump->k.u)
 		player_vel.y--;
 	if(jump->k.d)
@@ -146,12 +138,37 @@ void jump_logic(t_rend *rend, t_jump *jump)
 	if(jump->k.r)
 		player_vel.x++;
 
+	return (player_vel);
+}
 
-	player_pos.y += player_vel.y;
-	player_pos.x += player_vel.x;
-	rend_player_pos.y = (player_pos.y >> 5) + (LOGIC_H >> 1); 
-	rend_player_pos.x = (player_pos.x >> 5) + (LOGIC_W >> 1); 
+// TODO Replace the hardcoded value of 4 by a constant. >> 5 = 32 subpixels. >> 4 = 16 subpixels
+static inline t_point	world_point_to_rend_point(t_point point)
+{
+	t_point ret;
+	ret.x = (point.x >> 4) + (LOGIC_W >> 1); 
+	ret.y = (point.y >> 4) + (LOGIC_H >> 1); 
 
+	return (ret);
+}
+
+t_point	point_add(t_point a, t_point b)
+{
+	t_point ret;
+
+	ret.x = a.x + b.x;
+	ret.y = a.y + b.y;
+	return (ret);
+}
+
+void game_logic(t_rend *rend, t_jump *jump)
+{
+	static t_point player_vel 	= {0, 0};
+	static t_point player_pos 	= {0, 0};
+	t_point	rend_player_pos 	= {0, 0};
+
+	player_vel 		= update_player_velocity(jump, player_vel);
+	player_pos 		= point_add(player_pos, player_vel);
+	rend_player_pos = world_point_to_rend_point(player_pos);
 
 	draw_circle(rend->win_buffer, rend_player_pos, 15, 0xFFFFFFFF);	
 }
@@ -179,7 +196,7 @@ static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
    	while (accumulator >= tick_duration)
 	{
 		bzero(rend->win_buffer->pixels, LOGIC_H * LOGIC_W * sizeof(uint32_t));
-		jump_logic(rend, jump);
+		game_logic(rend, jump);
 		accumulator -= tick_duration;
 		new_ticks++;
 	}
