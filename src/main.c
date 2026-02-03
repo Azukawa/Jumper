@@ -127,6 +127,15 @@ void fps_counter(int ticks_this_frame)
 	}
 }
 
+int 	approach(int current_velo, int target_velo, int step)
+{
+	if (current_velo < target_velo)	
+		return ((current_velo + step > target_velo) ? target_velo : current_velo + step);
+	if (current_velo > target_velo)
+		return ((current_velo - step < target_velo) ? target_velo : current_velo - step);
+	return (current_velo);
+}
+
 t_point		clamp_velocity(int top_velocity, t_point velocity)
 {
 	t_point ret;
@@ -137,16 +146,21 @@ t_point		clamp_velocity(int top_velocity, t_point velocity)
 
 static inline t_point	update_player_velocity(t_jump *jump, t_point player_vel, int speed, int top_velocity)
 {
-	if(jump->k.u)
-		player_vel.y-= speed;
-	if(jump->k.d)
-		player_vel.y+= speed;
-	if(jump->k.l)
-		player_vel.x-= speed;
-	if(jump->k.r)
-		player_vel.x+= speed;
 
-	player_vel = clamp_velocity(top_velocity, player_vel);
+	t_point	target_speed = {0, 0};
+
+	if(jump->k.u)
+		target_speed.y = -top_velocity;
+	else if(jump->k.d)
+		target_speed.y = top_velocity;
+	if(jump->k.l)
+		target_speed.x = -top_velocity;
+	else if(jump->k.r)
+		target_speed.x = top_velocity;
+
+	player_vel.y = approach(player_vel.y, target_speed.y, speed);
+	player_vel.x = approach(player_vel.x, target_speed.x, speed);
+
 	return (player_vel);
 }
 
@@ -155,8 +169,8 @@ static inline t_point	update_player_velocity(t_jump *jump, t_point player_vel, i
 static inline t_point	world_point_to_rend_point(t_point point)
 {
 	t_point ret;
-	ret.x = (point.x >> 5) + (LOGIC_W >> 1); 
-	ret.y = (point.y >> 5) + (LOGIC_H >> 1); 
+	ret.x = (point.x >> 4) + (LOGIC_W >> 1); 
+	ret.y = (point.y >> 4) + (LOGIC_H >> 1); 
 
 	return (ret);
 }
@@ -175,10 +189,10 @@ void game_logic(t_rend *rend, t_jump *jump)
 	static t_point player_vel 	= {0, 0};
 	static t_point player_pos 	= {0, 0};
 	t_point	rend_player_pos 	= {0, 0};
-	int		speed				= 3;
-	int		top_velocity		= 300;
+	int		accel				= 2;
+	int		top_velocity		= 128; // this should be divideble by accel to avoid stutter
 
-	player_vel 		= update_player_velocity(jump, player_vel, speed, top_velocity);
+	player_vel 		= update_player_velocity(jump, player_vel, accel, top_velocity);
 	player_pos 		= point_add(player_pos, player_vel);
 	rend_player_pos = world_point_to_rend_point(player_pos);
 
