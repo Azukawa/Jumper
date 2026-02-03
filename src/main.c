@@ -150,7 +150,10 @@ static inline t_point	update_player_velocity(t_jump *jump, t_point player_vel, i
 	t_point	target_speed = {0, 0};
 
 	if(jump->k.u)
+	{
 		target_speed.y = -top_velocity;
+		player_vel.y = approach(player_vel.y, -top_velocity, 128);
+	}
 	else if(jump->k.d)
 		target_speed.y = top_velocity;
 	if(jump->k.l)
@@ -158,7 +161,7 @@ static inline t_point	update_player_velocity(t_jump *jump, t_point player_vel, i
 	else if(jump->k.r)
 		target_speed.x = top_velocity;
 
-	player_vel.y = approach(player_vel.y, target_speed.y, speed);
+//	player_vel.y = approach(player_vel.y, target_speed.y, speed);
 	player_vel.x = approach(player_vel.x, target_speed.x, speed);
 
 	return (player_vel);
@@ -184,6 +187,23 @@ t_point	point_add(t_point a, t_point b)
 	return (ret);
 }
 
+t_point		proto_floor(t_point player_pos, t_point *player_vel)
+{
+	if (player_pos.y > 200 << 4)
+	{
+		player_pos.y = 200 << 4;
+		player_vel->y = 0;
+	}
+	return (player_pos);
+}
+
+t_point		gravity(t_point player_pos)
+{
+
+	player_pos.y = approach(player_pos.y, 128, 4);
+	return(player_pos);
+}
+
 void game_logic(t_rend *rend, t_jump *jump)
 {
 	static t_point player_vel 	= {0, 0};
@@ -194,6 +214,8 @@ void game_logic(t_rend *rend, t_jump *jump)
 
 	player_vel 		= update_player_velocity(jump, player_vel, accel, top_velocity);
 	player_pos 		= point_add(player_pos, player_vel);
+	player_vel		= gravity(player_vel);
+	player_pos		= proto_floor(player_pos, &player_vel);
 	rend_player_pos = world_point_to_rend_point(player_pos);
 
 	draw_circle(rend->win_buffer, rend_player_pos, 15, 0xFFFFFFFF);	
