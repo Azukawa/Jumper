@@ -219,6 +219,27 @@ t_point		gravity(t_point player_pos)
 	return(player_pos);
 }
 
+void cape(t_rend *rend, t_point player_pos)
+{
+	static t_point cape[30];
+	int i = 29;
+
+	while(i > 0)
+	{
+		cape[i] = cape[i - 1];
+		i--;
+	}
+	cape[0] = player_pos;
+	i = 0;
+	while (i < 29)
+	{
+		draw_line(rend->win_buffer, world_point_to_rend_point(cape[i]), world_point_to_rend_point(cape[i +1]), 0xFFFF0000);
+		i++;
+	}
+
+
+}
+
 void game_logic(t_rend *rend, t_jump *jump)
 {
 	static t_point player_vel 	= {0, 0};
@@ -234,6 +255,7 @@ void game_logic(t_rend *rend, t_jump *jump)
 	rend_player_pos = world_point_to_rend_point(player_pos);
 
 	draw_circle(rend->win_buffer, rend_player_pos, 8, 0xFFFFFFFF);	
+	cape(rend, player_pos);
 }
 
 static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
