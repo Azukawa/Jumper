@@ -1,10 +1,6 @@
 #include "jumper.h"
-
 t_obj init_player();
 t_obj init_spear();
-//TODO
-//pause button
-//
 
 void	getout(const char *s)
 {
@@ -97,8 +93,10 @@ void	keyevent(SDL_Event *e, t_rend *rend, t_jump *jump)
 		jump->press_keys |= K_LEFT;
 	else if(keys[SDL_SCANCODE_RIGHT])	
 		jump->press_keys |= K_RIGHT;
-	if(keys[SDL_SCANCODE_SPACE])	
-		jump->press_keys |= K_SPACE;
+	if(keys[SDL_SCANCODE_SPACE] | keys[SDL_SCANCODE_X])	
+		jump->press_keys |= K_SPEAR;
+	if(keys[SDL_SCANCODE_Z] | keys[SDL_SCANCODE_UP])	
+		jump->press_keys |= K_JUMP;
 
 	int new_presses = jump->press_keys & ~old_keys;
 	jump->fresh_keys |= new_presses;
@@ -158,8 +156,11 @@ void	update_player_velocity(t_jump *jump, int speed, int top_velocity)
 
 	t_point	target_speed = {0, 0};
 
-	if((jump->fresh_keys  & K_UP) == K_UP)
+	if((jump->fresh_keys  & K_JUMP) == K_JUMP && jump->player.jumps)
+	{
 		jump->player.vel.y = approach(jump->player.vel.y, -top_velocity, 64);
+		jump->player.jumps--;
+	}
 //	if(jump->k.d)
 	if((jump->press_keys  & K_LEFT) == K_LEFT)
 	{
@@ -205,6 +206,8 @@ void		collision(t_obj *obj)
 	{
 		obj->pos.y = (100 - (obj->size.y >> 1)) << 4;
 		obj->vel.y = 0;
+		if(obj->type == TYPE_PLAYER)
+			obj->jumps = obj->max_jumps;
 	}
 	if (obj->pos.y < -(150 << 4) + ((obj->size.y >> 1) << 4)) // Ceiling
 	{
@@ -238,7 +241,6 @@ void		collision(t_obj *obj)
 
 t_point		gravity(t_point player_pos)
 {
-
 	player_pos.y = approach(player_pos.y, 128, 4);
 	return(player_pos);
 }
@@ -291,19 +293,19 @@ void spear_interaction(t_jump *jump)
 	static int		charge_timer 	= 0;
 	int				time_to_throw 	= 30;
 
-	if((jump->press_keys & K_SPACE) && jump->spear.held == FALSE && is_in_range_2d(jump->player.pos, jump->spear.pos, pickup_range))
+	if((jump->press_keys & K_SPEAR) && jump->spear.held == FALSE && is_in_range_2d(jump->player.pos, jump->spear.pos, pickup_range))
 	{
 		jump->spear.held = TRUE;
 		fresh_pick = TRUE;
 		spear_lag[0] = jump->player.pos;
 		jump->spear.stuck = FALSE;
 	}
-	else if((jump->press_keys & K_SPACE) && jump->spear.held == TRUE && fresh_pick == FALSE)
+	else if((jump->press_keys & K_SPEAR) && jump->spear.held == TRUE && fresh_pick == FALSE)
 	{
 		charge_timer++;
 		from_charge = TRUE;
 	}
-	else if(!(jump->press_keys & K_SPACE))
+	else if(!(jump->press_keys & K_SPEAR))
 	{
 		if (from_charge == TRUE)
 		{
@@ -350,6 +352,8 @@ t_obj init_player()
 	player.size 	= (t_point){16, 16};
 	player.dir 		= 0;
 	player.type 	= TYPE_PLAYER;
+	player.max_jumps= 1;
+	player.jumps	= 1;
 
 	return (player);	
 }
@@ -374,9 +378,8 @@ void	player_logic(t_jump *jump, int accel, int top_velocity)
 	update_player_velocity(jump, accel, top_velocity);
 	jump->player.vel		= gravity(jump->player.vel);
 	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
-//	jump->player.pos		= collision(jump->player.pos, &jump->player.vel, jump->player.size,jump->player.type);
-							collision(&jump->player);
-	jump->player.rend_pos = world_point_to_rend_point(jump->player.pos);
+							  collision(&jump->player);
+	jump->player.rend_pos 	= world_point_to_rend_point(jump->player.pos);
 }
 
 void	spear_logic(t_jump *jump)
@@ -384,9 +387,9 @@ void	spear_logic(t_jump *jump)
 	if(jump->spear.stuck == FALSE)
 		jump->spear.vel		= gravity(jump->spear.vel);
 	jump->spear.pos			= point_add(jump->spear.pos, jump->spear.vel);
-	jump->spear.rend_pos	= world_point_to_rend_point(jump->spear.pos);
 							  spear_interaction(jump);	
 							  collision(&jump->spear);
+	jump->spear.rend_pos	= world_point_to_rend_point(jump->spear.pos);
 }
 
 void	draw_spear(t_rend *rend, t_jump *jump)
@@ -394,7 +397,7 @@ void	draw_spear(t_rend *rend, t_jump *jump)
 	draw_line(rend->win_buffer, (t_point){jump->spear.rend_pos.x - (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, (t_point){jump->spear.rend_pos.x + (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, 0xFFFFFFFF);	
 }
 
-void game_logic(t_rend *rend, t_jump *jump)
+void	game_logic(t_rend *rend, t_jump *jump)
 {
 	int		accel				= 2;
 	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter

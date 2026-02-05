@@ -27,11 +27,12 @@
 # define DEG_TO_RAD 0.01745329251
 # define RAD_TO_DEG 57.2957795131
 
-#define K_SPACE		0x00000001
+#define K_SPEAR		0x00000001
 #define K_UP		0x00000002
 #define K_DOWN		0x00000004
 #define K_LEFT		0x00000008
 #define K_RIGHT		0x00000010
+#define K_JUMP		0x00000020
 
 #define TYPE_PLAYER 0
 #define TYPE_SPEAR  1
@@ -61,28 +62,25 @@ typedef struct s_rend
 	bool			run;
 }					t_rend;
 
-typedef	struct	s_keys{	// this propably is not needed. Delete later
-	bool	u;
-	bool	d;
-	bool	l;
-	bool	r;
-}				t_keys;
-
 typedef struct	s_obj{
-	t_point		vel;		//objects velocity
-	t_point		pos;		//objects position in world space
-	t_point		rend_pos;	// objects position on screen
+	//	Common variables
+	t_point		vel;		//	objects velocity
+	t_point		pos;		//	objects position in world space
+	t_point		rend_pos;	//	objects position on screen
 	t_point		size;		//	objects width and height
-	int			dir;	// objects direction. 0 = right, 1 = left, 2 = , 4 = down
-	bool		held;	// is object held by player, used for spear
-	bool		stuck;	// is object stuck in wall. Used for spear
-	int			type;
+	int			dir;		//	objects direction. 0 = right, 1 = left, 2 = , 4 = down
+	int			type;		//	what kind of object. Player or spear?
+	//	Spear variables
+	bool		held;		//	is object held by player, used for spear
+	bool		stuck;		//	is object stuck in wall. Used for spear
+	//	Player variables
+	int			jumps;		//	How many jumps left
+	int			max_jumps;	//	Maximum jumps available
 
 }				t_obj;
 
 typedef struct	s_jump{
 	
-	t_keys	k;
 	uint32_t	fresh_keys;
 	uint32_t	press_keys;
 	t_obj		player;
