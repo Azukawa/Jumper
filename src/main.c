@@ -71,32 +71,34 @@ void draw_2_window(t_rend *rend)
     SDL_RenderPresent(rend->rend);
 }
 
-// REMOVE SPACE FROM THE DOWN AND MAKE IT ITS OWN BUTTON
-// IN FACT CREATE WHOLE NEW INPUT SYSTEM WITH BUTTON MASKS!!!
 void	keyevent(SDL_Event *e, t_rend *rend, t_jump *jump)
 {
 	while (SDL_PollEvent(e))
 	{
 		if (e->window.event == SDL_WINDOWEVENT_CLOSE || e->key.keysym.sym == SDLK_ESCAPE)
 			rend->run = FALSE;
-		if (e->key.keysym.sym == SDLK_UP && e->type == SDL_KEYDOWN)
-			jump->k.u = 1;
-		else if (e->key.keysym.sym == SDLK_UP && e->type == SDL_KEYUP)
-			jump->k.u = 0;
-		if ((e->key.keysym.sym == SDLK_DOWN || e->key.keysym.sym == SDLK_SPACE) && e->type == SDL_KEYDOWN)
-			jump->k.d = 1;
-		else if ((e->key.keysym.sym == SDLK_DOWN || e->key.keysym.sym == SDLK_SPACE ) && e->type == SDL_KEYUP)
-			jump->k.d = 0;
-		if (e->key.keysym.sym == SDLK_LEFT && e->type == SDL_KEYDOWN)
-			jump->k.l = 1;
-		else if (e->key.keysym.sym == SDLK_LEFT && e->type == SDL_KEYUP)
-			jump->k.l = 0;
-		if (e->key.keysym.sym == SDLK_RIGHT && e->type == SDL_KEYDOWN)
-			jump->k.r = 1;
-		else if (e->key.keysym.sym == SDLK_RIGHT && e->type == SDL_KEYUP)
-			jump->k.r = 0;
 	}
-}
+
+	static int old_keys;
+	old_keys = jump->press_keys;
+	jump->press_keys = 0;
+	const uint8_t* keys = SDL_GetKeyboardState(NULL);
+
+	if(keys[SDL_SCANCODE_UP])	
+		jump->press_keys = jump->press_keys | K_UP;
+	else if(keys[SDL_SCANCODE_DOWN])	
+		jump->press_keys = jump->press_keys | K_DOWN;
+	if(keys[SDL_SCANCODE_LEFT])	
+		jump->press_keys = jump->press_keys | K_LEFT;
+	else if(keys[SDL_SCANCODE_RIGHT])	
+		jump->press_keys = jump->press_keys | K_RIGHT;
+	if(keys[SDL_SCANCODE_SPACE])	
+		jump->press_keys = jump->press_keys | K_SPACE;
+
+	jump->fresh_keys = jump->press_keys & ~old_keys;
+
+
+	}
 
 // This function made by chat gpt to eliminate the jitter that showed up in my own fps_counter() implementation
 void fps_counter(int ticks_this_frame) 
@@ -151,15 +153,15 @@ static inline t_point	update_player_velocity(t_jump *jump, t_point player_vel, i
 
 	t_point	target_speed = {0, 0};
 
-	if(jump->k.u)
+	if((jump->press_keys  & K_UP) == K_UP)
 		player_vel.y = approach(player_vel.y, -top_velocity, 64);
 //	if(jump->k.d)
-	if(jump->k.l)
+	if((jump->press_keys  & K_LEFT) == K_LEFT)
 	{
 		target_speed.x = -top_velocity;
 		*player_dir_left = 1;
 	}
-	else if(jump->k.r)
+	if((jump->press_keys  & K_RIGHT) == K_RIGHT)
 	{
 		target_speed.x = top_velocity;
 		*player_dir_left = 0;

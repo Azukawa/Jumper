@@ -31,7 +31,7 @@
 #define K_UP		0x00000002
 #define K_DOWN		0x00000004
 #define K_LEFT		0x00000008
-#define K_RIGHT		0x0000001F
+#define K_RIGHT		0x00000010
 	
 typedef struct s_buffer {
 	uint32_t		*pixels;
