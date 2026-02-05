@@ -36,7 +36,7 @@ static void	init(t_rend *renderer, t_jump *jump)
 	renderer->win_buffer->pixels = (uint32_t *)malloc(sizeof(uint32_t) * LOGIC_H * LOGIC_W);
 	if (!renderer->win_buffer->pixels)
 		getout("Failed to allocate pixel buffer");
-	renderer->win_buffer->pitch = WIN_W;
+	renderer->win_buffer->pitch = LOGIC_W;
 	bzero(renderer->win_buffer->pixels, sizeof(uint32_t) * LOGIC_H * LOGIC_W);
 	if (SDL_Init(SDL_INIT_VIDEO) != 0)
 		getout(SDL_GetError());
@@ -173,7 +173,6 @@ void	update_player_velocity(t_jump *jump, int speed, int top_velocity)
 	}
 
 	jump->player.vel.x = approach(jump->player.vel.x, target_speed.x, speed);
-
 }
 
 // TODO Replace the hardcoded subpixels value with constant.
@@ -181,6 +180,7 @@ void	update_player_velocity(t_jump *jump, int speed, int top_velocity)
 static inline t_point	world_point_to_rend_point(t_point point)
 {
 	t_point ret;
+
 	ret.x = (point.x >> 4) + (LOGIC_W >> 1); 
 	ret.y = (point.y >> 4) + (LOGIC_H >> 1); 
 
@@ -193,6 +193,7 @@ t_point	point_add(t_point a, t_point b)
 
 	ret.x = a.x + b.x;
 	ret.y = a.y + b.y;
+
 	return (ret);
 }
 
@@ -200,29 +201,29 @@ t_point	point_add(t_point a, t_point b)
 //	if we go under the floor, set height to floor and velocity.y to zero
 void		collision(t_obj *obj)
 {
-	if (obj->pos.y > (100 - (obj->size.y >> 1)) << 4)
+	if (obj->pos.y > (100 - (obj->size.y >> 1)) << 4) 		// Floor
 	{
 		obj->pos.y = (100 - (obj->size.y >> 1)) << 4;
 		obj->vel.y = 0;
 	}
-	if (obj->pos.y < -(150 << 4) + ((obj->size.y >> 1) << 4))
+	if (obj->pos.y < -(150 << 4) + ((obj->size.y >> 1) << 4)) // Ceiling
 	{
 		obj->pos.y = -(150 << 4) + (8 << 4);
 		obj->vel.y = -obj->vel.y >> 1;
 	}
 
-	if (obj->pos.x < -(200 << 4) + ((obj->size.x >> 1) << 4))
+	if (obj->pos.x < -(200 << 4) + ((obj->size.x >> 1) << 4)) // Left wall
 	{
-		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100)
+		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100) // if thrown fast, spear gets stuck
 		{
 			obj->stuck = TRUE;
 			obj->vel = (t_point){0, 0};
 		}
-		else
+		else												// else bounces
 			obj->vel.x = -obj->vel.x >> 1;
 		obj->pos.x = -(200 << 4) + ((obj->size.x >> 1)  << 4);
 	}
-	if (obj->pos.x > (200 << 4) - (((obj->size.x >> 1) + 1) << 4))
+	if (obj->pos.x > (200 << 4) - (((obj->size.x >> 1) + 1) << 4)) // Right wall
 	{
 		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100)
 		{
@@ -233,8 +234,6 @@ void		collision(t_obj *obj)
 			obj->vel.x = -obj->vel.x >> 1;
 		obj->pos.x = (200 << 4) - (((obj->size.x >> 1) + 1)  << 4);
 	}
-
-//	return (obj_pos);
 }
 
 t_point		gravity(t_point player_pos)
@@ -243,6 +242,7 @@ t_point		gravity(t_point player_pos)
 	player_pos.y = approach(player_pos.y, 128, 4);
 	return(player_pos);
 }
+
 //	replace magic numbers with constants
 void cape(t_rend *rend, t_point player_pos)
 {
@@ -285,11 +285,11 @@ bool	is_in_range_2d(t_point pos_a, t_point pos_b, t_point	range)
 void spear_interaction(t_jump *jump)
 {
 	static t_point	spear_lag[2];
-	static bool fresh_pick = FALSE;
-	static bool from_charge = FALSE;
-	t_point	pickup_range = {320, 160};
-	static int	charge_timer = 0;
-	int			time_to_throw = 30;
+	static bool		fresh_pick		= FALSE;
+	static bool		from_charge		= FALSE;
+	t_point			pickup_range	= {320, 160};
+	static int		charge_timer 	= 0;
+	int				time_to_throw 	= 30;
 
 	if((jump->press_keys & K_SPACE) && jump->spear.held == FALSE && is_in_range_2d(jump->player.pos, jump->spear.pos, pickup_range))
 	{
