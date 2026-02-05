@@ -1,5 +1,7 @@
 #include "jumper.h"
 
+t_obj init_player();
+t_obj init_spear();
 //TODO
 //pause button
 //
@@ -48,6 +50,11 @@ static void	init(t_rend *renderer, t_jump *jump)
 	if (!renderer->win_tex)
 		getout(SDL_GetError());
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+
+
+	jump->player = init_player();
+	jump->spear  = init_spear();
+
 	renderer->run = TRUE;
 }
 
@@ -146,28 +153,27 @@ t_point		clamp_velocity(int top_velocity, t_point velocity)
 	return (ret);
 }
 
-static inline t_point	update_player_velocity(t_jump *jump, t_point player_vel, int speed, int top_velocity, int *player_dir_left)
+void	update_player_velocity(t_jump *jump, int speed, int top_velocity)
 {
 
 	t_point	target_speed = {0, 0};
 
 	if((jump->fresh_keys  & K_UP) == K_UP)
-		player_vel.y = approach(player_vel.y, -top_velocity, 64);
+		jump->player.vel.y = approach(jump->player.vel.y, -top_velocity, 64);
 //	if(jump->k.d)
 	if((jump->press_keys  & K_LEFT) == K_LEFT)
 	{
 		target_speed.x = -top_velocity;
-		*player_dir_left = 1;
+		jump->player.dir = 1;
 	}
 	if((jump->press_keys  & K_RIGHT) == K_RIGHT)
 	{
 		target_speed.x = top_velocity;
-		*player_dir_left = 0;
+		jump->player.dir = 0;
 	}
 
-	player_vel.x = approach(player_vel.x, target_speed.x, speed);
+	jump->player.vel.x = approach(jump->player.vel.x, target_speed.x, speed);
 
-	return (player_vel);
 }
 
 // TODO Replace the hardcoded subpixels value with constant.
@@ -265,7 +271,7 @@ bool	is_in_range_2d(t_point pos_a, t_point pos_b, t_point	range)
 }
 
 // Change logic for input detection once fresh_press and press_press for keyevents is implemented
-void spear_interaction(t_jump *jump, t_point player_pos, t_point player_vel, t_point *spear_pos, t_point *spear_vel, int *spear_held, int player_dir_left)
+void spear_interaction(t_jump *jump)
 {
 	static t_point	spear_lag[2];
 	static bool fresh_pick = FALSE;
@@ -274,13 +280,13 @@ void spear_interaction(t_jump *jump, t_point player_pos, t_point player_vel, t_p
 	static int	charge_timer = 0;
 	int			time_to_throw = 30;
 
-	if((jump->press_keys & K_SPACE) && *spear_held == 0 && is_in_range_2d(player_pos, *spear_pos, pickup_range))
+	if((jump->press_keys & K_SPACE) && jump->spear.held == FALSE && is_in_range_2d(jump->player.pos, jump->spear.pos, pickup_range))
 	{
-		*spear_held = 1;
+		jump->spear.held = TRUE;
 		fresh_pick = TRUE;
-		spear_lag[0] = player_pos;
+		spear_lag[0] = jump->player.pos;
 	}
-	else if((jump->press_keys & K_SPACE) && *spear_held == 1 && fresh_pick == FALSE)
+	else if((jump->press_keys & K_SPACE) && jump->spear.held == TRUE && fresh_pick == FALSE)
 	{
 		charge_timer++;
 		from_charge = TRUE;
@@ -291,65 +297,91 @@ void spear_interaction(t_jump *jump, t_point player_pos, t_point player_vel, t_p
 		{
 			if(charge_timer >= time_to_throw)
 			{
-				if(player_dir_left)
-					spear_vel->x = approach(spear_vel->x, -512, 512);
+				if(jump->player.dir)
+					jump->spear.vel.x = approach(jump->spear.vel.x, -512, 512);
 				else
-					spear_vel->x = approach(spear_vel->x, 512, 512);
+					jump->spear.vel.x = approach(jump->spear.vel.x, 512, 512);
 			}
-			*spear_held = 0;
+			jump->spear.held = FALSE;
 			charge_timer = 0;
 			from_charge = FALSE;
 		}
 		fresh_pick = FALSE;
 	}
 
-	if (*spear_held == 1 )
+	if (jump->spear.held == TRUE )
 	{
 		spear_lag[1] = spear_lag[0];
-		spear_lag[0] = player_pos;
-		*spear_pos = spear_lag[1];
-		*spear_vel = player_vel;
+		spear_lag[0] = jump->player.pos;
+		jump->spear.pos = spear_lag[1];
+		jump->spear.vel = jump->player.vel;
 	}
 	else
-		spear_vel->x = approach(spear_vel->x, 0, 1);
+		jump->spear.vel.x = approach(jump->spear.vel.x, 0, 1);
 
+}
+
+void	clear_input_masks(t_jump *jump)
+{
+	jump->press_keys = 0; //clean inputs after tick
+	jump->fresh_keys = 0; //clean inputs after tick
+}
+
+t_obj init_player()
+{
+	t_obj player;
+	bzero(&player, sizeof(t_obj));
+	player.vel = (t_point){0, 0};
+	player.pos = (t_point){0, 0};
+	player.rend_pos = (t_point){0, 0};
+	player.size = (t_point){16, 16};
+	player.dir = 0;
+
+	return (player);	
+}
+
+t_obj init_spear()
+{
+	t_obj spear;
+
+	bzero(&spear, sizeof(t_obj));
+	spear.pos	= (t_point){1000, -1000};
+	spear.vel	= (t_point){0, 0};
+	spear.rend_pos 		= (t_point){0, 0};
+	spear.size			= (t_point){40, 1};
+	spear.held			= 0;
+
+	return (spear);
 }
 
 
 void game_logic(t_rend *rend, t_jump *jump)
 {
-	static t_point player_vel 	= {0, 0};
-	static t_point player_pos 	= {0, 0};
-	t_point	rend_player_pos 	= {0, 0};
-	static t_point player_size 	= {16, 16};
-	static int player_dir_left		= 1;
-
 	int		accel				= 2;
 	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
 
-	static 	t_point spear_pos	= {1000, -1000};
-	static 	t_point spear_vel	= {0, 0};
-	t_point	rend_spear_pos 		= {0, 0};
-	t_point	spear_size			= {40, 1};
-	static int		spear_held			= 0;
+//	static 	t_point spear_pos	= {1000, -1000};
+//	static 	t_point spear_vel	= {0, 0};
+//	t_point	rend_spear_pos 		= {0, 0};
+//	t_point	spear_size			= {40, 1};
+//	static int		spear_held			= 0;
 
-	player_vel 		= update_player_velocity(jump, player_vel, accel, top_velocity, &player_dir_left);
-	player_vel		= gravity(player_vel);
-	player_pos 		= point_add(player_pos, player_vel);
-	player_pos		= collision(player_pos, &player_vel, player_size);
-	rend_player_pos = world_point_to_rend_point(player_pos);
-	draw_circle(rend->win_buffer, rend_player_pos, 8, 0xFFFFFFFF);	
-	cape(rend, player_pos);
+							update_player_velocity(jump, accel, top_velocity);
+	jump->player.vel		= gravity(jump->player.vel);
+	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
+	jump->player.pos		= collision(jump->player.pos, &jump->player.vel, jump->player.size);
+	jump->player.rend_pos = world_point_to_rend_point(jump->player.pos);
+	draw_circle(rend->win_buffer, jump->player.rend_pos, 8, 0xFFFFFFFF);	
+	cape(rend, jump->player.pos);
 
-	spear_vel		= gravity(spear_vel);
-	spear_pos		= point_add(spear_pos, spear_vel);
-	rend_spear_pos	= world_point_to_rend_point(spear_pos);
-					spear_interaction(jump, player_pos, player_vel, &spear_pos, &spear_vel, &spear_held, player_dir_left);	
-	spear_pos		= collision(spear_pos, &spear_vel, spear_size);
-	draw_line(rend->win_buffer, (t_point){rend_spear_pos.x - (spear_size.x >> 1), rend_spear_pos.y}, (t_point){rend_spear_pos.x + (spear_size.x >> 1), rend_spear_pos.y}, 0xFFFFFFFF);	
+	jump->spear.vel		= gravity(jump->spear.vel);
+	jump->spear.pos		= point_add(jump->spear.pos, jump->spear.vel);
+	jump->spear.rend_pos	= world_point_to_rend_point(jump->spear.pos);
+					spear_interaction(jump);	
+	jump->spear.pos		= collision(jump->spear.pos, &jump->spear.vel, jump->spear.size);
+	draw_line(rend->win_buffer, (t_point){jump->spear.rend_pos.x - (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, (t_point){jump->spear.rend_pos.x + (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, 0xFFFFFFFF);	
 
-	jump->press_keys = 0; //clean inputs after tick
-	jump->fresh_keys = 0; //clean inputs after tick
+	clear_input_masks(jump);
 }
 
 static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)

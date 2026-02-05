@@ -64,12 +64,26 @@ typedef	struct	s_keys{	// this propably is not needed. Delete later
 	bool	r;
 }				t_keys;
 
+typedef struct	s_obj{
+	t_point		vel;		//objects velocity
+	t_point		pos;		//objects position in world space
+	t_point		rend_pos;	// objects position on screen
+	t_point		size;		//	objects width and height
+	int			dir;	// objects direction. 0 = right, 1 = left, 2 = , 4 = down
+	bool		held;	// is object held by player, used for spear
+	bool		stuck;	// is object stuck in wall. Used for spear
+
+}				t_obj;
+
 typedef struct	s_jump{
 	
 	t_keys	k;
 	uint32_t	fresh_keys;
 	uint32_t	press_keys;
+	t_obj		player;
+	t_obj		spear;
 }				t_jump;
+
 
 void		draw_pixel(uint32_t x, uint32_t y, t_buffer *buf, uint32_t color);
 void		draw_line(t_buffer *buf, t_point p0, t_point p1, uint32_t color);
