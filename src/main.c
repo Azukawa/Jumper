@@ -80,25 +80,23 @@ void	keyevent(SDL_Event *e, t_rend *rend, t_jump *jump)
 	}
 
 	static int old_keys;
-	old_keys = jump->press_keys;
-	jump->press_keys = 0;
 	const uint8_t* keys = SDL_GetKeyboardState(NULL);
 
 	if(keys[SDL_SCANCODE_UP])	
-		jump->press_keys = jump->press_keys | K_UP;
+		jump->press_keys |= K_UP;
 	else if(keys[SDL_SCANCODE_DOWN])	
-		jump->press_keys = jump->press_keys | K_DOWN;
+		jump->press_keys |= K_DOWN;
 	if(keys[SDL_SCANCODE_LEFT])	
-		jump->press_keys = jump->press_keys | K_LEFT;
+		jump->press_keys |= K_LEFT;
 	else if(keys[SDL_SCANCODE_RIGHT])	
-		jump->press_keys = jump->press_keys | K_RIGHT;
+		jump->press_keys |= K_RIGHT;
 	if(keys[SDL_SCANCODE_SPACE])	
-		jump->press_keys = jump->press_keys | K_SPACE;
+		jump->press_keys |= K_SPACE;
 
-	jump->fresh_keys = jump->press_keys & ~old_keys;
-
-
-	}
+	int new_presses = jump->press_keys & ~old_keys;
+	jump->fresh_keys |= new_presses;
+	old_keys = jump->press_keys;
+}
 
 // This function made by chat gpt to eliminate the jitter that showed up in my own fps_counter() implementation
 void fps_counter(int ticks_this_frame) 
@@ -153,7 +151,7 @@ static inline t_point	update_player_velocity(t_jump *jump, t_point player_vel, i
 
 	t_point	target_speed = {0, 0};
 
-	if((jump->press_keys  & K_UP) == K_UP)
+	if((jump->fresh_keys  & K_UP) == K_UP)
 		player_vel.y = approach(player_vel.y, -top_velocity, 64);
 //	if(jump->k.d)
 	if((jump->press_keys  & K_LEFT) == K_LEFT)
@@ -276,18 +274,18 @@ void spear_interaction(t_jump *jump, t_point player_pos, t_point player_vel, t_p
 	static int	charge_timer = 0;
 	int			time_to_throw = 30;
 
-	if(jump->k.d && *spear_held == 0 && is_in_range_2d(player_pos, *spear_pos, pickup_range))
+	if((jump->press_keys & K_SPACE) && *spear_held == 0 && is_in_range_2d(player_pos, *spear_pos, pickup_range))
 	{
 		*spear_held = 1;
 		fresh_pick = TRUE;
 		spear_lag[0] = player_pos;
 	}
-	else if(jump->k.d && *spear_held == 1 && fresh_pick == FALSE)
+	else if((jump->press_keys & K_SPACE) && *spear_held == 1 && fresh_pick == FALSE)
 	{
 		charge_timer++;
 		from_charge = TRUE;
 	}
-	else if(!jump->k.d)
+	else if(!(jump->press_keys & K_SPACE))
 	{
 		if (from_charge == TRUE)
 		{
@@ -350,6 +348,8 @@ void game_logic(t_rend *rend, t_jump *jump)
 	spear_pos		= collision(spear_pos, &spear_vel, spear_size);
 	draw_line(rend->win_buffer, (t_point){rend_spear_pos.x - (spear_size.x >> 1), rend_spear_pos.y}, (t_point){rend_spear_pos.x + (spear_size.x >> 1), rend_spear_pos.y}, 0xFFFFFFFF);	
 
+	jump->press_keys = 0; //clean inputs after tick
+	jump->fresh_keys = 0; //clean inputs after tick
 }
 
 static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
