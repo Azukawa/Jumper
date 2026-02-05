@@ -32,6 +32,10 @@
 #define K_DOWN		0x00000004
 #define K_LEFT		0x00000008
 #define K_RIGHT		0x00000010
+
+#define TYPE_PLAYER 0
+#define TYPE_SPEAR  1
+
 	
 typedef struct s_buffer {
 	uint32_t		*pixels;
@@ -72,6 +76,7 @@ typedef struct	s_obj{
 	int			dir;	// objects direction. 0 = right, 1 = left, 2 = , 4 = down
 	bool		held;	// is object held by player, used for spear
 	bool		stuck;	// is object stuck in wall. Used for spear
+	int			type;
 
 }				t_obj;
 

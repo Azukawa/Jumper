@@ -196,34 +196,45 @@ t_point	point_add(t_point a, t_point b)
 	return (ret);
 }
 
+
 //	if we go under the floor, set height to floor and velocity.y to zero
-t_point		collision(t_point obj_pos, t_point *obj_vel, t_point obj_size)
+void		collision(t_obj *obj)
 {
-	if (obj_pos.y > (100 - (obj_size.y >> 1)) << 4)
+	if (obj->pos.y > (100 - (obj->size.y >> 1)) << 4)
 	{
-		obj_pos.y = (100 - (obj_size.y >> 1)) << 4;
-		obj_vel->y = 0;
+		obj->pos.y = (100 - (obj->size.y >> 1)) << 4;
+		obj->vel.y = 0;
 	}
-	if (obj_pos.y < -(150 << 4) + ((obj_size.y >> 1) << 4))
+	if (obj->pos.y < -(150 << 4) + ((obj->size.y >> 1) << 4))
 	{
-		obj_pos.y = -(150 << 4) + (8 << 4);
-		obj_vel->y = -obj_vel->y >> 1;
-	}
-
-	if (obj_pos.x < -(200 << 4) + ((obj_size.x >> 1) << 4))
-	{
-			
-		obj_pos.x = -(200 << 4) + ((obj_size.x >> 1)  << 4);
-		obj_vel->x = -obj_vel->x >> 1;
-	}
-	if (obj_pos.x > (200 << 4) - (((obj_size.x >> 1) + 1) << 4))
-	{
-			
-		obj_pos.x = (200 << 4) - (((obj_size.x >> 1) + 1)  << 4);
-		obj_vel->x = -obj_vel->x >> 1;
+		obj->pos.y = -(150 << 4) + (8 << 4);
+		obj->vel.y = -obj->vel.y >> 1;
 	}
 
-	return (obj_pos);
+	if (obj->pos.x < -(200 << 4) + ((obj->size.x >> 1) << 4))
+	{
+		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100)
+		{
+			obj->stuck = TRUE;
+			obj->vel = (t_point){0, 0};
+		}
+		else
+			obj->vel.x = -obj->vel.x >> 1;
+		obj->pos.x = -(200 << 4) + ((obj->size.x >> 1)  << 4);
+	}
+	if (obj->pos.x > (200 << 4) - (((obj->size.x >> 1) + 1) << 4))
+	{
+		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100)
+		{
+			obj->stuck = TRUE;
+			obj->vel = (t_point){0, 0};
+		}
+		else
+			obj->vel.x = -obj->vel.x >> 1;
+		obj->pos.x = (200 << 4) - (((obj->size.x >> 1) + 1)  << 4);
+	}
+
+//	return (obj_pos);
 }
 
 t_point		gravity(t_point player_pos)
@@ -235,8 +246,8 @@ t_point		gravity(t_point player_pos)
 //	replace magic numbers with constants
 void cape(t_rend *rend, t_point player_pos)
 {
-	static t_point cape[30];
-	int i = 29;
+	static	t_point cape[30];
+	int		i = 29;
 
 	while(i > 0)
 	{
@@ -285,6 +296,7 @@ void spear_interaction(t_jump *jump)
 		jump->spear.held = TRUE;
 		fresh_pick = TRUE;
 		spear_lag[0] = jump->player.pos;
+		jump->spear.stuck = FALSE;
 	}
 	else if((jump->press_keys & K_SPACE) && jump->spear.held == TRUE && fresh_pick == FALSE)
 	{
@@ -330,12 +342,14 @@ void	clear_input_masks(t_jump *jump)
 t_obj init_player()
 {
 	t_obj player;
+
 	bzero(&player, sizeof(t_obj));
-	player.vel = (t_point){0, 0};
-	player.pos = (t_point){0, 0};
-	player.rend_pos = (t_point){0, 0};
-	player.size = (t_point){16, 16};
-	player.dir = 0;
+	player.vel 		= (t_point){0, 0};
+	player.pos 		= (t_point){0, 0};
+	player.rend_pos	= (t_point){0, 0};
+	player.size 	= (t_point){16, 16};
+	player.dir 		= 0;
+	player.type 	= TYPE_PLAYER;
 
 	return (player);	
 }
@@ -345,11 +359,12 @@ t_obj init_spear()
 	t_obj spear;
 
 	bzero(&spear, sizeof(t_obj));
-	spear.pos	= (t_point){1000, -1000};
-	spear.vel	= (t_point){0, 0};
-	spear.rend_pos 		= (t_point){0, 0};
-	spear.size			= (t_point){40, 1};
-	spear.held			= 0;
+	spear.pos		= (t_point){1000, -1000};
+	spear.vel		= (t_point){0, 0};
+	spear.rend_pos 	= (t_point){0, 0};
+	spear.size		= (t_point){40, 1};
+	spear.held		= 0;
+	spear.type 		= TYPE_SPEAR;
 
 	return (spear);
 }
@@ -359,17 +374,19 @@ void	player_logic(t_jump *jump, int accel, int top_velocity)
 	update_player_velocity(jump, accel, top_velocity);
 	jump->player.vel		= gravity(jump->player.vel);
 	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
-	jump->player.pos		= collision(jump->player.pos, &jump->player.vel, jump->player.size);
+//	jump->player.pos		= collision(jump->player.pos, &jump->player.vel, jump->player.size,jump->player.type);
+							collision(&jump->player);
 	jump->player.rend_pos = world_point_to_rend_point(jump->player.pos);
 }
 
 void	spear_logic(t_jump *jump)
 {
-	jump->spear.vel			= gravity(jump->spear.vel);
+	if(jump->spear.stuck == FALSE)
+		jump->spear.vel		= gravity(jump->spear.vel);
 	jump->spear.pos			= point_add(jump->spear.pos, jump->spear.vel);
 	jump->spear.rend_pos	= world_point_to_rend_point(jump->spear.pos);
 							  spear_interaction(jump);	
-	jump->spear.pos			= collision(jump->spear.pos, &jump->spear.vel, jump->spear.size);
+							  collision(&jump->spear);
 }
 
 void	draw_spear(t_rend *rend, t_jump *jump)
