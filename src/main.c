@@ -183,33 +183,33 @@ t_point	point_add(t_point a, t_point b)
 }
 
 //	if we go under the floor, set height to floor and velocity.y to zero
-t_point		proto_floor(t_point player_pos, t_point *player_vel)
+t_point		collision(t_point obj_pos, t_point *obj_vel, t_point obj_size)
 {
-	if (player_pos.y > 100 << 4)
+	if (obj_pos.y > (100 - (obj_size.y >> 1)) << 4)
 	{
-		player_pos.y = 100 << 4;
-		player_vel->y = 0;
+		obj_pos.y = (100 - (obj_size.y >> 1)) << 4;
+		obj_vel->y = 0;
 	}
-	if (player_pos.y < -(150 << 4) + (8 << 4))
+	if (obj_pos.y < -(150 << 4) + ((obj_size.y >> 1) << 4))
 	{
-		player_pos.y = -(150 << 4) + (8 << 4);
-		player_vel->y = -player_vel->y >> 1;
-	}
-
-	if (player_pos.x < -(200 << 4) + (8 << 4))
-	{
-			
-		player_pos.x = -(200 << 4) + (8 << 4);
-		player_vel->x = -player_vel->x >> 1;
-	}
-	if (player_pos.x > (200 << 4) - (9 << 4))
-	{
-			
-		player_pos.x = (200 << 4) - (9 << 4);
-		player_vel->x = -player_vel->x >> 1;
+		obj_pos.y = -(150 << 4) + (8 << 4);
+		obj_vel->y = -obj_vel->y >> 1;
 	}
 
-	return (player_pos);
+	if (obj_pos.x < -(200 << 4) + ((obj_size.x >> 1) << 4))
+	{
+			
+		obj_pos.x = -(200 << 4) + ((obj_size.x >> 1)  << 4);
+		obj_vel->x = -obj_vel->x >> 1;
+	}
+	if (obj_pos.x > (200 << 4) - (((obj_size.x >> 1) + 1) << 4))
+	{
+			
+		obj_pos.x = (200 << 4) - (((obj_size.x >> 1) + 1)  << 4);
+		obj_vel->x = -obj_vel->x >> 1;
+	}
+
+	return (obj_pos);
 }
 
 t_point		gravity(t_point player_pos)
@@ -218,7 +218,7 @@ t_point		gravity(t_point player_pos)
 	player_pos.y = approach(player_pos.y, 128, 4);
 	return(player_pos);
 }
-
+//	replace magic numbers with constants
 void cape(t_rend *rend, t_point player_pos)
 {
 	static t_point cape[30];
@@ -237,25 +237,108 @@ void cape(t_rend *rend, t_point player_pos)
 		i++;
 	}
 
+//	draw_circle(rend->win_buffer, world_point_to_rend_point(cape[i]), 8, 0xFFFFFFFF);	
 
 }
+
+bool	is_in_range(int pos_a, int pos_b, int	range)
+{
+	if (pos_a < pos_b + range && pos_a > pos_b - range)
+		return (TRUE);
+	return (FALSE);
+
+}
+
+bool	is_in_range_2d(t_point pos_a, t_point pos_b, t_point	range)
+{
+	if (is_in_range(pos_a.x, pos_b.x, range.x) && is_in_range(pos_a.y, pos_b.y, range.y))
+		return (TRUE);
+	return (FALSE);
+}
+
+// Change logic for input detection once fresh_press and press_press for keyevents is implemented
+void spear_interaction(t_jump *jump, t_point player_pos, t_point player_vel, t_point *spear_pos, t_point *spear_vel, int *spear_held)
+{
+	static t_point	spear_lag[2];
+	static bool fresh_pick = FALSE;
+	static bool old_down = FALSE;
+	t_point	pickup_range = {320, 160};
+	static int	charge_timer = 0;
+	int			time_to_throw = 30;
+
+	if(jump->k.d && *spear_held == 0 && is_in_range_2d(player_pos, *spear_pos, pickup_range))
+	{
+		*spear_held = 1;
+		fresh_pick = TRUE;
+		spear_lag[0] = player_pos;
+		old_down = TRUE;
+	}
+	else if(jump->k.d && *spear_held == 1 && fresh_pick == FALSE)
+	{
+		charge_timer++;
+		printf("CHARGE!!\n");
+		old_down = TRUE;
+	}
+	else if(!jump->k.d && old_down == FALSE)
+	{
+		if(fresh_pick == FALSE)
+		{
+			if(*spear_held == 1 && charge_timer >= time_to_throw)
+			{
+				spear_vel->x = approach(spear_vel->x, 258, 2);
+				printf("THROW!!\n");
+			}
+			*spear_held = 0;
+			charge_timer = 0;
+		}
+		fresh_pick = FALSE;
+	}
+	else if(!jump->k.d && old_down == TRUE)
+		old_down = FALSE;
+
+	if (*spear_held == 1 )
+	{
+		spear_lag[1] = spear_lag[0];
+		spear_lag[0] = player_pos;
+		*spear_pos = spear_lag[1];
+		*spear_vel = player_vel;
+	}
+	else
+		spear_vel->x = approach(spear_vel->x, 0, 1);
+
+}
+
 
 void game_logic(t_rend *rend, t_jump *jump)
 {
 	static t_point player_vel 	= {0, 0};
 	static t_point player_pos 	= {0, 0};
 	t_point	rend_player_pos 	= {0, 0};
+	static t_point player_size 	= {16, 16};
+
 	int		accel				= 2;
-	int		top_velocity		= 128; // this should be divideble by accel to avoid stutter
+	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
+	static 	t_point spear_pos	= {1000, -1000};
+	static 	t_point spear_vel	= {0, 0};
+	t_point	rend_spear_pos 		= {0, 0};
+	t_point	spear_size			= {40, 1};
+	static int		spear_held			= 0;
 
 	player_vel 		= update_player_velocity(jump, player_vel, accel, top_velocity);
 	player_vel		= gravity(player_vel);
 	player_pos 		= point_add(player_pos, player_vel);
-	player_pos		= proto_floor(player_pos, &player_vel);
+	player_pos		= collision(player_pos, &player_vel, player_size);
 	rend_player_pos = world_point_to_rend_point(player_pos);
-
 	draw_circle(rend->win_buffer, rend_player_pos, 8, 0xFFFFFFFF);	
 	cape(rend, player_pos);
+
+	spear_vel		= gravity(spear_vel);
+	spear_pos		= point_add(spear_pos, spear_vel);
+	rend_spear_pos	= world_point_to_rend_point(spear_pos);
+					spear_interaction(jump, player_pos, player_vel, &spear_pos, &spear_vel, &spear_held);	
+	spear_pos		= collision(spear_pos, &spear_vel, spear_size);
+	draw_line(rend->win_buffer, (t_point){rend_spear_pos.x - (spear_size.x >> 1), rend_spear_pos.y}, (t_point){rend_spear_pos.x + (spear_size.x >> 1), rend_spear_pos.y}, 0xFFFFFFFF);	
+
 }
 
 static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
