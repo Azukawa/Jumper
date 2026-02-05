@@ -354,32 +354,41 @@ t_obj init_spear()
 	return (spear);
 }
 
+void	player_logic(t_jump *jump, int accel, int top_velocity)
+{
+	update_player_velocity(jump, accel, top_velocity);
+	jump->player.vel		= gravity(jump->player.vel);
+	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
+	jump->player.pos		= collision(jump->player.pos, &jump->player.vel, jump->player.size);
+	jump->player.rend_pos = world_point_to_rend_point(jump->player.pos);
+}
+
+void	spear_logic(t_jump *jump)
+{
+	jump->spear.vel			= gravity(jump->spear.vel);
+	jump->spear.pos			= point_add(jump->spear.pos, jump->spear.vel);
+	jump->spear.rend_pos	= world_point_to_rend_point(jump->spear.pos);
+							  spear_interaction(jump);	
+	jump->spear.pos			= collision(jump->spear.pos, &jump->spear.vel, jump->spear.size);
+}
+
+void	draw_spear(t_rend *rend, t_jump *jump)
+{
+	draw_line(rend->win_buffer, (t_point){jump->spear.rend_pos.x - (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, (t_point){jump->spear.rend_pos.x + (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, 0xFFFFFFFF);	
+}
 
 void game_logic(t_rend *rend, t_jump *jump)
 {
 	int		accel				= 2;
 	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
 
-//	static 	t_point spear_pos	= {1000, -1000};
-//	static 	t_point spear_vel	= {0, 0};
-//	t_point	rend_spear_pos 		= {0, 0};
-//	t_point	spear_size			= {40, 1};
-//	static int		spear_held			= 0;
+	player_logic(jump, accel, top_velocity);
+	draw_circle(rend->win_buffer, jump->player.rend_pos, 8, 0xFFFFFFFF); //	render player
 
-							update_player_velocity(jump, accel, top_velocity);
-	jump->player.vel		= gravity(jump->player.vel);
-	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
-	jump->player.pos		= collision(jump->player.pos, &jump->player.vel, jump->player.size);
-	jump->player.rend_pos = world_point_to_rend_point(jump->player.pos);
-	draw_circle(rend->win_buffer, jump->player.rend_pos, 8, 0xFFFFFFFF);	
 	cape(rend, jump->player.pos);
 
-	jump->spear.vel		= gravity(jump->spear.vel);
-	jump->spear.pos		= point_add(jump->spear.pos, jump->spear.vel);
-	jump->spear.rend_pos	= world_point_to_rend_point(jump->spear.pos);
-					spear_interaction(jump);	
-	jump->spear.pos		= collision(jump->spear.pos, &jump->spear.vel, jump->spear.size);
-	draw_line(rend->win_buffer, (t_point){jump->spear.rend_pos.x - (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, (t_point){jump->spear.rend_pos.x + (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, 0xFFFFFFFF);	
+	spear_logic(jump);
+	draw_spear(rend, jump);
 
 	clear_input_masks(jump);
 }
