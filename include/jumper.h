@@ -71,11 +71,11 @@ typedef struct	s_obj{
 	int			dir;		//	objects direction. 0 = right, 1 = left, 2 = , 4 = down
 	int			type;		//	what kind of object. Player or spear?
 	//	Spear variables
-	bool		held;		//	is object held by player, used for spear
-	bool		stuck;		//	is object stuck in wall. Used for spear
+	bool		held;		//	is object held by player,		Used for spear
+	bool		stuck;		//	is object stuck in wall.	Used for spear
 	//	Player variables
-	int			jumps;		//	How many jumps left
-	int			max_jumps;	//	Maximum jumps available
+	int			jumps;		//	How many jumps left				Used for player
+	int			max_jumps;	//	Maximum jumps available,	Used for player
 
 }				t_obj;
 

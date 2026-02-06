@@ -155,12 +155,23 @@ void	update_player_velocity(t_jump *jump, int speed, int top_velocity)
 {
 
 	t_point	target_speed = {0, 0};
+	static int			jump_meter = 20;
+	static bool			jump_over = TRUE;
 
 	if((jump->fresh_keys  & K_JUMP) == K_JUMP && jump->player.jumps)
 	{
 		jump->player.vel.y = approach(jump->player.vel.y, -top_velocity, 64);
 		jump->player.jumps--;
+		jump_meter = 20;
+		jump_over = FALSE;
 	}
+	else if((jump->press_keys  & K_JUMP) == K_JUMP && jump_meter && jump_over == FALSE)
+	{
+		jump->player.vel.y = approach(jump->player.vel.y, -top_velocity, 4);
+		jump_meter--;
+	}
+	else
+		jump_over = TRUE;
 //	if(jump->k.d)
 	if((jump->press_keys  & K_LEFT) == K_LEFT)
 	{
