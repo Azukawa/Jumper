@@ -1,5 +1,5 @@
-#ifndef SNAKER_H
-# define SNAKER_H
+#ifndef JUMPER_H
+# define JUMPER_H
 
 # include <time.h>
 # include <stdlib.h>
@@ -58,7 +58,7 @@ typedef struct s_rend
 	SDL_Texture		*win_tex;
 	void			*win_pixels;
 	t_buffer		*win_buffer;
-	int				win_pixel_pitch; // can this be deleted?
+//	int				win_pixel_pitch; // can this be deleted?
 	bool			run;
 }					t_rend;
 

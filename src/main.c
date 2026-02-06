@@ -255,7 +255,7 @@ t_point		gravity(t_point player_pos)
 }
 
 //	replace magic numbers with constants
-void cape(t_rend *rend, t_point player_pos)
+void		cape(t_rend *rend, t_point player_pos)
 {
 	static	t_point cape[30];
 	int		i = 29;
@@ -304,10 +304,10 @@ void spear_interaction(t_jump *jump)
 
 	if((jump->press_keys & K_SPEAR) && jump->spear.held == FALSE && is_in_range_2d(jump->player.pos, jump->spear.pos, pickup_range))
 	{
-		jump->spear.held = TRUE;
-		fresh_pick = TRUE;
-		spear_lag[0] = jump->player.pos;
-		jump->spear.stuck = FALSE;
+		jump->spear.held	= TRUE;
+		fresh_pick			= TRUE;
+		spear_lag[0] 		= jump->player.pos;
+		jump->spear.stuck	= FALSE;
 	}
 	else if((jump->press_keys & K_SPEAR) && jump->spear.held == TRUE && fresh_pick == FALSE)
 	{
@@ -325,17 +325,17 @@ void spear_interaction(t_jump *jump)
 				else
 					jump->spear.vel.x = approach(jump->spear.vel.x, 512, 512);
 			}
-			jump->spear.held = FALSE;
-			charge_timer = 0;
-			from_charge = FALSE;
+			jump->spear.held	= FALSE;
+			charge_timer 		= 0;
+			from_charge			= FALSE;
 		}
 		fresh_pick = FALSE;
 	}
 
 	if (jump->spear.held == TRUE )
 	{
-		spear_lag[1] = spear_lag[0];
-		spear_lag[0] = jump->player.pos;
+		spear_lag[1]	= spear_lag[0];
+		spear_lag[0]	= jump->player.pos;
 		jump->spear.pos = spear_lag[1];
 		jump->spear.vel = jump->player.vel;
 	}
@@ -406,10 +406,33 @@ void	draw_spear(t_rend *rend, t_jump *jump)
 	draw_line(rend->win_buffer, (t_point){jump->spear.rend_pos.x - (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, (t_point){jump->spear.rend_pos.x + (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, 0xFFFFFFFF);	
 }
 
+void	draw_map(t_rend *rend, char*map, t_point map_size)
+{
+	int	tile_rend_size = 16;
+	int	tile_world_size = tile_rend_size << 4;
+	t_point	tile_size = {tile_world_size, tile_world_size};
+	t_point	a = {0, 0};
+	t_point	b = point_add(a, tile_size);
+	t_point	map_origo = {-160 *16, 30<< 4};
+
+	for(int y = 0; y < map_size.y; y++)
+	{
+		for(int x = 0; x < map_size.x; x++)
+		{
+			a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
+			b = point_add(a, tile_size);
+			if(map[x + (y * map_size.x)] == 'X')
+				draw_square(world_point_to_rend_point(a), world_point_to_rend_point(b), rend->win_buffer, 0x08FF00FF);
+		}
+	}
+}
+
 void	game_logic(t_rend *rend, t_jump *jump)
 {
 	int		accel				= 2;
 	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
+	char	*map	= "X00000000XX00X00000XXXXXXXXXXX";
+	t_point	map_size = {10, 3};
 
 	player_logic(jump, accel, top_velocity);
 	draw_circle(rend->win_buffer, jump->player.rend_pos, 8, 0xFFFFFFFF); //	render player
@@ -418,7 +441,7 @@ void	game_logic(t_rend *rend, t_jump *jump)
 
 	spear_logic(jump);
 	draw_spear(rend, jump);
-
+	draw_map(rend, map, map_size);	
 	clear_input_masks(jump);
 }
 
@@ -451,7 +474,7 @@ static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
 	}
 	if(new_ticks != 0)
 		draw_2_window(rend);
-	fps_counter(new_ticks);
+//	fps_counter(new_ticks);
 	SDL_Delay(1);
 	
 }
