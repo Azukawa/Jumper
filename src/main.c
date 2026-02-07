@@ -406,7 +406,7 @@ void	draw_spear(t_rend *rend, t_jump *jump)
 	draw_line(rend->win_buffer, (t_point){jump->spear.rend_pos.x - (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, (t_point){jump->spear.rend_pos.x + (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, 0xFFFFFFFF);	
 }
 
-void	draw_map(t_rend *rend, char*map, t_point map_size)
+void	draw_terrain(t_rend *rend, char*map, t_point map_size)
 {
 	int	tile_rend_size = 16;
 	int	tile_world_size = tile_rend_size << 4;
@@ -427,6 +427,32 @@ void	draw_map(t_rend *rend, char*map, t_point map_size)
 	}
 }
 
+//	player needs hitbox
+void	terrain_collision(t_jump *jump, char *map, t_point map_size)
+{	
+
+	int	tile_rend_size = 16;
+	int	tile_world_size = tile_rend_size << 4;
+	t_point	tile_size = {tile_world_size, tile_world_size};
+	t_point	a = {0, 0};
+	t_point	b = point_add(a, tile_size);
+	t_point	map_origo = {-160 *16, 30<< 4};
+
+	for(int y = 0; y < map_size.y; y++)
+	{
+		for(int x = 0; x < map_size.x; x++)
+		{
+			a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
+			b = point_add(a, tile_size);
+
+			if(jump->player.pos.x > a.x && jump->player.pos.x < b.x && jump->player.pos.y > a.y && jump->player.pos.y < b.y && map[x + (y * map_size.x)] == 'X')
+				printf("COLLISION\n");
+
+		}
+	}
+
+}
+
 void	game_logic(t_rend *rend, t_jump *jump)
 {
 	int		accel				= 2;
@@ -441,7 +467,8 @@ void	game_logic(t_rend *rend, t_jump *jump)
 
 	spear_logic(jump);
 	draw_spear(rend, jump);
-	draw_map(rend, map, map_size);	
+	terrain_collision(jump, map, map_size);
+	draw_terrain(rend, map, map_size);	
 	clear_input_masks(jump);
 }
 
