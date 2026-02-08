@@ -6,7 +6,7 @@
 /*   By: eniini <eniini@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/10 15:01:46 by eniini            #+#    #+#             */
-/*   Updated: 2026/02/02 23:40:45 by alero            ###   ########.fr       */
+/*   Updated: 2026/02/08 11:24:34 by alero            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -122,7 +122,7 @@ void	draw_circle(t_buffer *buf, t_point p, int r, uint32_t color)
 		draw_pixel(p.x + y, p.y - x, buf, color);
 		draw_pixel(p.x - y, p.y - x, buf, color);
 		if (d < 0)
-			d += (2 * ++y) + 1;
+			d += (2 * ++y);
 		else
 		{
 			x--;
@@ -184,9 +184,9 @@ void	draw_square(t_point p0, t_point p1, t_buffer *buf, int color)
 		ft_swap(&p1.y, &p0.y, sizeof(int));
 	x = p0.x;
 	y = p0.y;
-	while (y <= p1.y)
+	while (y < p1.y)
 	{
-		while (x <= p1.x)
+		while (x < p1.x)
 		{
 			draw_pixel(x, y, buf, color);
 			x++;

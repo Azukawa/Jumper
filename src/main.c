@@ -1,6 +1,7 @@
 #include "jumper.h"
 t_obj init_player();
 t_obj init_spear();
+void	terrain_collision(t_obj *obj, char *map, t_point map_size);;
 
 void	getout(const char *s)
 {
@@ -207,6 +208,16 @@ t_point	point_add(t_point a, t_point b)
 	return (ret);
 }
 
+t_point	point_sub(t_point a, t_point b)
+{
+	t_point ret;
+
+	ret.x = a.x - b.x;
+	ret.y = a.y - b.y;
+
+	return (ret);
+}
+
 
 //	if we go under the floor, set height to floor and velocity.y to zero
 void		collision(t_obj *obj)
@@ -356,9 +367,9 @@ t_obj init_player()
 
 	bzero(&player, sizeof(t_obj));
 	player.vel 		= (t_point){0, 0};
-	player.pos 		= (t_point){0, 0};
+	player.pos 		= (t_point){256, 256};
 	player.rend_pos	= (t_point){0, 0};
-	player.size 	= (t_point){16, 16};
+	player.size 	= (t_point){17, 17};
 	player.dir 		= 0;
 	player.type 	= TYPE_PLAYER;
 	player.max_jumps= 1;
@@ -382,15 +393,6 @@ t_obj init_spear()
 	return (spear);
 }
 
-void	player_logic(t_jump *jump, int accel, int top_velocity)
-{
-	update_player_velocity(jump, accel, top_velocity);
-	jump->player.vel		= gravity(jump->player.vel);
-	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
-							  collision(&jump->player);
-	jump->player.rend_pos 	= world_point_to_rend_point(jump->player.pos);
-}
-
 void	spear_logic(t_jump *jump)
 {
 	if(jump->spear.stuck == FALSE)
@@ -406,14 +408,15 @@ void	draw_spear(t_rend *rend, t_jump *jump)
 	draw_line(rend->win_buffer, (t_point){jump->spear.rend_pos.x - (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, (t_point){jump->spear.rend_pos.x + (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, 0xFFFFFFFF);	
 }
 
-void	draw_terrain(t_rend *rend, char*map, t_point map_size)
+void	draw_terrain(t_rend *rend, char*map, t_point map_size, t_point camera)
 {
 	int	tile_rend_size = 16;
 	int	tile_world_size = tile_rend_size << 4;
 	t_point	tile_size = {tile_world_size, tile_world_size};
 	t_point	a = {0, 0};
 	t_point	b = point_add(a, tile_size);
-	t_point	map_origo = {-160 *16, 30<< 4};
+	t_point	map_origo = {-1280, 0};
+	map_origo = point_sub(map_origo, camera);
 
 	for(int y = 0; y < map_size.y; y++)
 	{
@@ -421,35 +424,93 @@ void	draw_terrain(t_rend *rend, char*map, t_point map_size)
 		{
 			a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
 			b = point_add(a, tile_size);
-			if(map[x + (y * map_size.x)] == 'X')
+			if(map[x + y * map_size.x] == 'X')
 				draw_square(world_point_to_rend_point(a), world_point_to_rend_point(b), rend->win_buffer, 0x08FF00FF);
 		}
 	}
 }
 
-//	player needs hitbox
-void	terrain_collision(t_jump *jump, char *map, t_point map_size)
-{	
+int div_floor(int a, int b) {
+	    return (a >= 0) ? (a / b) : ((a - b + 1) / b);
+}
 
+//	player needs hitbox
+void	terrain_collision(t_obj *obj, char *map, t_point map_size)
+{	
 	int	tile_rend_size = 16;
 	int	tile_world_size = tile_rend_size << 4;
 	t_point	tile_size = {tile_world_size, tile_world_size};
-	t_point	a = {0, 0};
+	t_point	map_origo = {-1280, 0};
+	int y = (((obj->pos.y) - map_origo.y) / tile_world_size);
+	int x = (((obj->pos.x) - map_origo.x) / tile_world_size);
+	int left_x = (((obj->pos.x - 128) - map_origo.x) / tile_world_size);
+	int right_x = (((obj->pos.x + 128 - 1) - map_origo.x) / tile_world_size);
+	int head_y = (((obj->pos.y - 128) - map_origo.y) / tile_world_size);
+	int feet_y = (((obj->pos.y + 128) - map_origo.y) / tile_world_size);
+	t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
 	t_point	b = point_add(a, tile_size);
-	t_point	map_origo = {-160 *16, 30<< 4};
-
-	for(int y = 0; y < map_size.y; y++)
+	//	Floor
+	if	(obj->vel.y > 0 && \
+		x < map_size.x && x >= 0 && \
+		feet_y < map_size.y && feet_y >= 0 && \
+		(map[left_x + feet_y * map_size.x] == 'X' || map[right_x + feet_y * map_size.x] == 'X' )) 
 	{
-		for(int x = 0; x < map_size.x; x++)
-		{
-			a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-			b = point_add(a, tile_size);
-
-			if(jump->player.pos.x > a.x && jump->player.pos.x < b.x && jump->player.pos.y > a.y && jump->player.pos.y < b.y && map[x + (y * map_size.x)] == 'X')
-				printf("COLLISION\n");
-
-		}
+		obj->pos.y = a.y + 128;
+		obj->vel.y = 0;
+		if(obj->type == TYPE_PLAYER)
+			obj->jumps = obj->max_jumps;
 	}
+//	Ceiling
+	if	(obj->vel.y < 0 && \
+		x < map_size.x && x >= 0 && head_y < map_size.y && head_y >= 0 && \
+		map[x + head_y * map_size.x] == 'X') 
+	{
+		obj->pos.y = a.y + 128;
+		obj->vel.y = -obj->vel.y >> 1;
+	}
+	//	Left wall
+	if	(obj->vel.x < 0 && \
+		left_x < map_size.x && left_x >= 0 && y < map_size.y && y >= 0 && \
+		map[left_x + y * map_size.x] == 'X') 
+	{
+		obj->pos.x = b.x -128;
+		obj->vel.x = -(obj->vel.x >> 1);
+	}
+	// Right wall
+	if	(obj->vel.x > 0 && \
+		right_x < map_size.x && right_x >= 0 && y < map_size.y && y >= 0 && \
+		map[right_x + y * map_size.x] == 'X') 
+	{
+		obj->pos.x = a.x +128;
+		obj->vel.x = -(obj->vel.x >> 1);
+	}
+//	printf("x = %d\ty = %d\tpos.x = %d\tpos.y = %d\n", x, y, obj->pos.x, obj->pos.y);
+}
+
+void	player_logic(t_jump *jump, int accel, int top_velocity)
+{
+	update_player_velocity(jump, accel, top_velocity);
+	jump->player.vel		= gravity(jump->player.vel);
+	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
+	//						  collision(&jump->player);
+//	jump->player.rend_pos 	= world_point_to_rend_point(jump->player.pos);
+}
+
+t_point	camera_follow(t_point pos, t_point camera, t_point camera_vel)
+{
+	int	speed = 48;
+	int accel = 2;
+
+	if(camera.x < pos.x )
+		camera_vel.x = approach(camera_vel.x, -speed, accel);
+	else if(camera.x > pos.x)
+		camera_vel.x = approach(camera_vel.x, speed, accel);
+	if(camera.y < pos.y)
+		camera_vel.y = approach(camera_vel.y, -speed, accel);
+	else if(camera.y > pos.y)
+		camera_vel.y = approach(camera_vel.y, speed, accel);
+
+	return(camera_vel);
 
 }
 
@@ -457,18 +518,47 @@ void	game_logic(t_rend *rend, t_jump *jump)
 {
 	int		accel				= 2;
 	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
-	char	*map	= "X00000000XX00X00000XXXXXXXXXXX";
-	t_point	map_size = {10, 3};
+//	char	*map	= "X00000000XX00X00000XXXXXXXXXXX";
+	char	*map	= 	"XXXXXXXXXXXXXXXXXXXX"
+						"X000000000000000000X"
+						"X000000000000000000X"
+						"X000000000000000000X"
+						"X0000X00X0000000000X"
+						"X0000XXXX0000000000X"
+						"X0000000000000X0000X"
+						"X0000000000000X0000X"
+						"X000000000000000000X"
+						"X000000000000000000X"
+						"X000000000000000000X"
+						"X0000000000000X0000X"
+						"X000000000000000000X"
+						"XXXX000000000000000X"
+						"X000000000000000000X"
+						"X0000000000X0000000X"
+						"X00000000XXXX000000X"
+						"X0000X0000000000000X"
+						"X0000X0000000000000X"
+						"XXXXXXXXXXXXXXXXXXXX";
+
+	t_point	map_size = {20, 20};
+	static t_point	camera_vel = {0,0};
+	static t_point	camera = {0,0};
 
 	player_logic(jump, accel, top_velocity);
-	draw_circle(rend->win_buffer, jump->player.rend_pos, 8, 0xFFFFFFFF); //	render player
+	terrain_collision(&jump->player, map, map_size);
+//	jump->player.rend_pos 	= world_point_to_rend_point(jump->player.pos);
+	camera_vel = camera_follow(jump->player.pos, camera, camera_vel);
+	camera = point_sub(camera, camera_vel);
 
+	jump->player.rend_pos 	= world_point_to_rend_point(point_sub(jump->player.pos, camera));
+	draw_square((t_point){jump->player.rend_pos.x - (jump->player.size.x / 2), jump->player.rend_pos.y - (jump->player.size.y / 2)}, (t_point){jump->player.rend_pos.x + (jump->player.size.x / 2), jump->player.rend_pos.y + (jump->player.size.y / 2)}, rend->win_buffer, 0xAAAAAA);
+
+//	draw_circle(rend->win_buffer, jump->player.rend_pos, 8, 0xFFFFFFFF); //	render player
 	cape(rend, jump->player.pos);
 
 	spear_logic(jump);
 	draw_spear(rend, jump);
-	terrain_collision(jump, map, map_size);
-	draw_terrain(rend, map, map_size);	
+	draw_terrain(rend, map, map_size, camera);	
 	clear_input_masks(jump);
 }
 
@@ -501,7 +591,7 @@ static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
 	}
 	if(new_ticks != 0)
 		draw_2_window(rend);
-//	fps_counter(new_ticks);
+	fps_counter(new_ticks);
 	SDL_Delay(1);
 	
 }

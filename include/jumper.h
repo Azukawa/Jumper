@@ -19,6 +19,10 @@
 # define WIN_W 800
 # define WIN_H 600
 
+# define P_SIZE 16
+# define P_HALF 8
+
+
 # define WIN_NAME "Jumper!"
 
 # define TRUE	1
