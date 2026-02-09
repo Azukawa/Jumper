@@ -13,8 +13,8 @@
 # include "../libSDL2/include/SDL2/SDL_mixer.h"
 # include "../libSDL2/include/SDL2/SDL.h"
 
-# define LOGIC_W 400
-# define LOGIC_H 300
+# define LOGIC_W 200
+# define LOGIC_H 150
 
 # define WIN_W 800
 # define WIN_H 600
@@ -66,6 +66,14 @@ typedef struct s_rend
 	bool			run;
 }					t_rend;
 
+typedef struct	s_map
+{
+	char *map;
+	int	x;
+	int y;
+
+}				t_map;
+
 typedef struct	s_obj{
 	//	Common variables
 	t_point		vel;		//	objects velocity
@@ -80,8 +88,13 @@ typedef struct	s_obj{
 	//	Player variables
 	int			jumps;		//	How many jumps left				Used for player
 	int			max_jumps;	//	Maximum jumps available,	Used for player
-
 }				t_obj;
+
+typedef struct	s_camera
+{
+	t_point		pos;
+	t_point		vel;
+}				t_camera;
 
 typedef struct	s_jump{
 	
@@ -89,6 +102,8 @@ typedef struct	s_jump{
 	uint32_t	press_keys;
 	t_obj		player;
 	t_obj		spear;
+	t_map		map;
+	t_camera	camera;
 }				t_jump;
 
 

@@ -1,7 +1,7 @@
 #include "jumper.h"
 t_obj init_player();
 t_obj init_spear();
-void	terrain_collision(t_obj *obj, char *map, t_point map_size);;
+void	terrain_collision(t_obj *obj, t_map *map);
 
 void	getout(const char *s)
 {
@@ -19,6 +19,35 @@ void	getout(const char *s)
 	}
 	exit(EXIT_FAILURE);
 }
+
+t_map	init_map()
+{
+	t_map 	map;
+	map.x = 20;
+	map.y = 20;
+	map.map = 	"XXXXXXXXXXXXXXXXXXXX"
+				"X000000000000000000X"
+				"X000000000000000000X"
+				"X000000000000000000X"
+				"X0000X00X0000000000X"
+				"X0000XXXX0000000000X"
+				"X0000000000000X0000X"
+				"X0000000000000X0000X"
+				"X000000000000000000X"
+				"X000000000000000000X"
+				"X000000000000000000X"
+				"X0000000000000X0000X"
+				"X000000000000000000X"
+				"XXXX000000000000000X"
+				"X000000000000000000X"
+				"X0000000000X0000000X"
+				"X00000000XXXX000000X"
+				"X0000X0000000000000X"
+				"X0000X0000000000000X"
+				"XXXXXXXXXXXXXXXXXXXX";
+		return (map);
+}
+
 
 static void	init(t_rend *renderer, t_jump *jump)
 {
@@ -51,6 +80,7 @@ static void	init(t_rend *renderer, t_jump *jump)
 
 	jump->player = init_player();
 	jump->spear  = init_spear();
+	jump->map	= init_map();
 
 	renderer->run = TRUE;
 }
@@ -266,7 +296,7 @@ t_point		gravity(t_point player_pos)
 }
 
 //	replace magic numbers with constants
-void		cape(t_rend *rend, t_point player_pos)
+void		cape(t_rend *rend, t_point player_pos, t_point camera)
 {
 	static	t_point cape[30];
 	int		i = 29;
@@ -280,7 +310,7 @@ void		cape(t_rend *rend, t_point player_pos)
 	i = 0;
 	while (i < 29)
 	{
-		draw_line(rend->win_buffer, world_point_to_rend_point(cape[i]), world_point_to_rend_point(cape[i +1]), 0xFFFF0000);
+		draw_line(rend->win_buffer, world_point_to_rend_point(point_sub(cape[i], camera)), world_point_to_rend_point(point_sub(cape[i +1], camera)), 0xFFFF0000);
 		i++;
 	}
 
@@ -408,7 +438,7 @@ void	draw_spear(t_rend *rend, t_jump *jump)
 	draw_line(rend->win_buffer, (t_point){jump->spear.rend_pos.x - (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, (t_point){jump->spear.rend_pos.x + (jump->spear.size.x >> 1), jump->spear.rend_pos.y}, 0xFFFFFFFF);	
 }
 
-void	draw_terrain(t_rend *rend, char*map, t_point map_size, t_point camera)
+void	draw_terrain(t_rend *rend, t_map *map, t_point *camera)
 {
 	int	tile_rend_size = 16;
 	int	tile_world_size = tile_rend_size << 4;
@@ -416,26 +446,22 @@ void	draw_terrain(t_rend *rend, char*map, t_point map_size, t_point camera)
 	t_point	a = {0, 0};
 	t_point	b = point_add(a, tile_size);
 	t_point	map_origo = {-1280, 0};
-	map_origo = point_sub(map_origo, camera);
+	map_origo = point_sub(map_origo, *camera);
 
-	for(int y = 0; y < map_size.y; y++)
+	for(int y = 0; y < map->y; y++)
 	{
-		for(int x = 0; x < map_size.x; x++)
+		for(int x = 0; x < map->x; x++)
 		{
 			a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
 			b = point_add(a, tile_size);
-			if(map[x + y * map_size.x] == 'X')
+			if(map->map[x + y * map->x] == 'X')
 				draw_square(world_point_to_rend_point(a), world_point_to_rend_point(b), rend->win_buffer, 0x08FF00FF);
 		}
 	}
 }
 
-int div_floor(int a, int b) {
-	    return (a >= 0) ? (a / b) : ((a - b + 1) / b);
-}
-
 //	player needs hitbox
-void	terrain_collision(t_obj *obj, char *map, t_point map_size)
+void	terrain_collision(t_obj *obj, t_map *map)
 {	
 	int	tile_rend_size = 16;
 	int	tile_world_size = tile_rend_size << 4;
@@ -451,9 +477,9 @@ void	terrain_collision(t_obj *obj, char *map, t_point map_size)
 	t_point	b = point_add(a, tile_size);
 	//	Floor
 	if	(obj->vel.y > 0 && \
-		x < map_size.x && x >= 0 && \
-		feet_y < map_size.y && feet_y >= 0 && \
-		(map[left_x + feet_y * map_size.x] == 'X' || map[right_x + feet_y * map_size.x] == 'X' )) 
+		x < map->x && x >= 0 && \
+		feet_y < map->y && feet_y >= 0 && \
+		(map->map[left_x + feet_y * map->x] == 'X' || map->map[right_x + feet_y * map->x] == 'X' )) 
 	{
 		obj->pos.y = a.y + 128;
 		obj->vel.y = 0;
@@ -462,24 +488,24 @@ void	terrain_collision(t_obj *obj, char *map, t_point map_size)
 	}
 //	Ceiling
 	if	(obj->vel.y < 0 && \
-		x < map_size.x && x >= 0 && head_y < map_size.y && head_y >= 0 && \
-		map[x + head_y * map_size.x] == 'X') 
+		x < map->x && x >= 0 && head_y < map->y && head_y >= 0 && \
+		map->map[x + head_y * map->x] == 'X') 
 	{
 		obj->pos.y = a.y + 128;
 		obj->vel.y = -obj->vel.y >> 1;
 	}
 	//	Left wall
 	if	(obj->vel.x < 0 && \
-		left_x < map_size.x && left_x >= 0 && y < map_size.y && y >= 0 && \
-		map[left_x + y * map_size.x] == 'X') 
+		left_x < map->x && left_x >= 0 && y < map->y && y >= 0 && \
+		map->map[left_x + y * map->x] == 'X') 
 	{
 		obj->pos.x = b.x -128;
 		obj->vel.x = -(obj->vel.x >> 1);
 	}
 	// Right wall
 	if	(obj->vel.x > 0 && \
-		right_x < map_size.x && right_x >= 0 && y < map_size.y && y >= 0 && \
-		map[right_x + y * map_size.x] == 'X') 
+		right_x < map->x && right_x >= 0 && y < map->y && y >= 0 && \
+		map->map[right_x + y * map->x] == 'X') 
 	{
 		obj->pos.x = a.x +128;
 		obj->vel.x = -(obj->vel.x >> 1);
@@ -492,25 +518,43 @@ void	player_logic(t_jump *jump, int accel, int top_velocity)
 	update_player_velocity(jump, accel, top_velocity);
 	jump->player.vel		= gravity(jump->player.vel);
 	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
-	//						  collision(&jump->player);
-//	jump->player.rend_pos 	= world_point_to_rend_point(jump->player.pos);
+	terrain_collision(&jump->player, &jump->map);
+	jump->player.rend_pos 	= world_point_to_rend_point(point_sub(jump->player.pos, jump->camera.pos));
 }
 
-t_point	camera_follow(t_point pos, t_point camera, t_point camera_vel)
+t_point	camera_follow(t_point pos, t_camera camera)
 {
-	int	speed = 48;
-	int accel = 2;
+	int	speed = 96;
+	int accel = 4;
+	int dead_zone = 256;
 
-	if(camera.x < pos.x )
-		camera_vel.x = approach(camera_vel.x, -speed, accel);
-	else if(camera.x > pos.x)
-		camera_vel.x = approach(camera_vel.x, speed, accel);
-	if(camera.y < pos.y)
-		camera_vel.y = approach(camera_vel.y, -speed, accel);
-	else if(camera.y > pos.y)
-		camera_vel.y = approach(camera_vel.y, speed, accel);
+	if(camera.pos.x < pos.x - dead_zone )
+		camera.vel.x = approach(camera.vel.x, -speed, accel);
+	else if(camera.pos.x > pos.x + dead_zone)
+		camera.vel.x = approach(camera.vel.x, speed, accel);
+	else
+		camera.vel.x = approach(camera.vel.x, 0, accel * 3);
+	if(camera.pos.y < pos.y - (dead_zone << 1))
+		camera.vel.y = approach(camera.vel.y, -speed, accel);
+	else if(camera.pos.y > pos.y + (dead_zone))
+		camera.vel.y = approach(camera.vel.y, speed, accel);
+	else
+		camera.vel.y = approach(camera.vel.y, 0, accel * 3);
 
-	return(camera_vel);
+	return(camera.vel);
+
+}
+
+void	draw_player(t_rend *rend, t_obj *player)
+{
+	draw_square((t_point){player->rend_pos.x - (player->size.x / 2), player->rend_pos.y - (player->size.y / 2)}, (t_point){player->rend_pos.x + (player->size.x / 2), player->rend_pos.y + (player->size.y / 2)}, rend->win_buffer, 0xAAAAAA);
+}
+
+void	update_camera(t_obj *player, t_camera *camera)
+{
+	camera->vel = camera_follow(player->pos, *camera);
+	camera->pos = point_sub(camera->pos, camera->vel);
+
 
 }
 
@@ -518,47 +562,14 @@ void	game_logic(t_rend *rend, t_jump *jump)
 {
 	int		accel				= 2;
 	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
-//	char	*map	= "X00000000XX00X00000XXXXXXXXXXX";
-	char	*map	= 	"XXXXXXXXXXXXXXXXXXXX"
-						"X000000000000000000X"
-						"X000000000000000000X"
-						"X000000000000000000X"
-						"X0000X00X0000000000X"
-						"X0000XXXX0000000000X"
-						"X0000000000000X0000X"
-						"X0000000000000X0000X"
-						"X000000000000000000X"
-						"X000000000000000000X"
-						"X000000000000000000X"
-						"X0000000000000X0000X"
-						"X000000000000000000X"
-						"XXXX000000000000000X"
-						"X000000000000000000X"
-						"X0000000000X0000000X"
-						"X00000000XXXX000000X"
-						"X0000X0000000000000X"
-						"X0000X0000000000000X"
-						"XXXXXXXXXXXXXXXXXXXX";
-
-	t_point	map_size = {20, 20};
-	static t_point	camera_vel = {0,0};
-	static t_point	camera = {0,0};
 
 	player_logic(jump, accel, top_velocity);
-	terrain_collision(&jump->player, map, map_size);
-//	jump->player.rend_pos 	= world_point_to_rend_point(jump->player.pos);
-	camera_vel = camera_follow(jump->player.pos, camera, camera_vel);
-	camera = point_sub(camera, camera_vel);
-
-	jump->player.rend_pos 	= world_point_to_rend_point(point_sub(jump->player.pos, camera));
-	draw_square((t_point){jump->player.rend_pos.x - (jump->player.size.x / 2), jump->player.rend_pos.y - (jump->player.size.y / 2)}, (t_point){jump->player.rend_pos.x + (jump->player.size.x / 2), jump->player.rend_pos.y + (jump->player.size.y / 2)}, rend->win_buffer, 0xAAAAAA);
-
-//	draw_circle(rend->win_buffer, jump->player.rend_pos, 8, 0xFFFFFFFF); //	render player
-	cape(rend, jump->player.pos);
-
+	update_camera(&jump->player, &jump->camera);
+	draw_player(rend, &jump->player);
+	cape(rend, jump->player.pos, jump->camera.pos);
 	spear_logic(jump);
 	draw_spear(rend, jump);
-	draw_terrain(rend, map, map_size, camera);	
+	draw_terrain(rend, &jump->map, &jump->camera.pos);	
 	clear_input_masks(jump);
 }
 
@@ -577,6 +588,7 @@ static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
 	
 	frame_time = (double)(now - last) / SDL_GetPerformanceFrequency();
 	last = now;	
+	terrain_collision(&jump->player, &jump->map);
 	if (frame_time > 0.25)	// deathloop protection
 		frame_time = 0.25;
 

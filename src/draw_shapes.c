@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   draw_shapes.c                                      :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: eniini <eniini@student.hive.fi>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/08/10 15:01:46 by eniini            #+#    #+#             */
-/*   Updated: 2026/02/08 11:24:34 by alero            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "jumper.h"
 
 void	ft_swap(void *a, void *b, size_t size)
@@ -166,33 +154,17 @@ void	draw_filled_circle(t_buffer *buf, t_point p, int r, uint32_t color)
 
 
 
-
-/*
-*	Paints a square area of pixels with given color.
-*	Ignores calls given with illegal (outside of buffer region) coordinates.
-*/
 void	draw_square(t_point p0, t_point p1, t_buffer *buf, int color)
 {
-	int	x;
-	int	y;
-
-	if ((p0.x > buf->w || p1.x > buf->w) || (p0.y > buf->h || p1.y > buf->h))
-		return ;
 	if (p1.x < p0.x)
 		ft_swap(&p1.x, &p0.x, sizeof(int));
 	if (p1.y < p0.y)
 		ft_swap(&p1.y, &p0.y, sizeof(int));
-	x = p0.x;
-	y = p0.y;
-	while (y < p1.y)
+	
+	for(int y = p0.y; y < p1.y; y++)
 	{
-		while (x < p1.x)
-		{
+		for(int x = p0.x; x < p1.x; x++)
 			draw_pixel(x, y, buf, color);
-			x++;
-		}
-		x = p0.x;
-		y++;
 	}
 }
 
