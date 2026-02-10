@@ -13,8 +13,8 @@
 # include "../libSDL2/include/SDL2/SDL_mixer.h"
 # include "../libSDL2/include/SDL2/SDL.h"
 
-# define LOGIC_W 200
-# define LOGIC_H 150
+# define LOGIC_W 400
+# define LOGIC_H 300
 
 # define WIN_W 800
 # define WIN_H 600

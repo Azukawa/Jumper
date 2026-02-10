@@ -385,10 +385,10 @@ void spear_interaction(t_jump *jump)
 
 }
 
-void	clear_input_masks(t_jump *jump)
+void	clear_input_masks(uint32_t *fresh_keys, uint32_t *press_keys)
 {
-	jump->press_keys = 0; //clean inputs after tick
-	jump->fresh_keys = 0; //clean inputs after tick
+	*press_keys = 0; //clean inputs after tick
+	*fresh_keys = 0; //clean inputs after tick
 }
 
 t_obj init_player()
@@ -519,12 +519,12 @@ void	player_logic(t_jump *jump, int accel, int top_velocity)
 	jump->player.vel		= gravity(jump->player.vel);
 	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
 	terrain_collision(&jump->player, &jump->map);
-	jump->player.rend_pos 	= world_point_to_rend_point(point_sub(jump->player.pos, jump->camera.pos));
+//	jump->player.rend_pos 	= world_point_to_rend_point(point_sub(jump->player.pos, jump->camera.pos));
 }
 
 t_point	camera_follow(t_point pos, t_camera camera)
 {
-	int	speed = 96;
+	int	speed = 112;
 	int accel = 4;
 	int dead_zone = 256;
 
@@ -545,8 +545,9 @@ t_point	camera_follow(t_point pos, t_camera camera)
 
 }
 
-void	draw_player(t_rend *rend, t_obj *player)
+void	draw_player(t_rend *rend, t_obj *player, t_camera *camera)
 {
+	player->rend_pos 	= world_point_to_rend_point(point_sub(player->pos, camera->pos));
 	draw_square((t_point){player->rend_pos.x - (player->size.x / 2), player->rend_pos.y - (player->size.y / 2)}, (t_point){player->rend_pos.x + (player->size.x / 2), player->rend_pos.y + (player->size.y / 2)}, rend->win_buffer, 0xAAAAAA);
 }
 
@@ -554,8 +555,6 @@ void	update_camera(t_obj *player, t_camera *camera)
 {
 	camera->vel = camera_follow(player->pos, *camera);
 	camera->pos = point_sub(camera->pos, camera->vel);
-
-
 }
 
 void	game_logic(t_rend *rend, t_jump *jump)
@@ -565,12 +564,12 @@ void	game_logic(t_rend *rend, t_jump *jump)
 
 	player_logic(jump, accel, top_velocity);
 	update_camera(&jump->player, &jump->camera);
-	draw_player(rend, &jump->player);
-	cape(rend, jump->player.pos, jump->camera.pos);
-	spear_logic(jump);
-	draw_spear(rend, jump);
+	draw_player(rend, &jump->player, &jump->camera);
 	draw_terrain(rend, &jump->map, &jump->camera.pos);	
-	clear_input_masks(jump);
+	cape(rend, jump->player.pos, jump->camera.pos);
+//	spear_logic(jump);
+//	draw_spear(rend, jump);
+	clear_input_masks(&jump->fresh_keys, &jump->press_keys);
 }
 
 static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
@@ -588,7 +587,6 @@ static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
 	
 	frame_time = (double)(now - last) / SDL_GetPerformanceFrequency();
 	last = now;	
-	terrain_collision(&jump->player, &jump->map);
 	if (frame_time > 0.25)	// deathloop protection
 		frame_time = 0.25;
 
