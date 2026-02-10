@@ -295,6 +295,180 @@ t_point		gravity(t_point player_pos)
 	return(player_pos);
 }
 
+bool	is_in_range(int pos_a, int pos_b, int	range)
+{
+	if (pos_a < pos_b + range && pos_a > pos_b - range)
+		return (TRUE);
+	return (FALSE);
+
+}
+
+bool	is_in_range_2d(t_point pos_a, t_point pos_b, t_point	range)
+{
+	if (is_in_range(pos_a.x, pos_b.x, range.x) && is_in_range(pos_a.y, pos_b.y, range.y))
+		return (TRUE);
+	return (FALSE);
+}
+
+// this function is from think geek
+int64_t square_root(int64_t n)
+{
+    // Find MSB(Most significant Bit) of N
+    int64_t msb = (int64_t)(log2(n));
+
+    // (a = 2^msb)
+    int64_t a = 1 << msb;
+    int64_t result = 0;
+    while (a != 0) {
+		// Check whether the current value
+		// of 'a' can be added or not
+		if ((result + a) * (result + a) <= n) {
+			result += a;
+		}
+
+		// (a = a/2)
+		a >>= 1;
+    }
+    // Return the result
+    return result;
+}
+
+typedef struct s_link
+{
+	t_point pos;
+	bool	pinned;
+}				t_link;
+
+typedef struct s_cape
+{
+		t_point pos;
+		t_point old;
+		bool	pinned;
+}				t_cape;
+
+void		distance_constraint(t_cape *a, t_cape *b, int	desired_length)
+{
+	int64_t corr_x = 0;
+	int64_t corr_y = 0;
+	int64_t	solver_scale = 64;	// this is the resolution of simulation. Make in to define
+
+	int64_t	delta_x = b->pos.x - a->pos.x;
+	int64_t	delta_y = b->pos.y - a->pos.y;
+
+	int64_t	distance_squared = delta_x * delta_x + delta_y * delta_y;
+	if (distance_squared == 0)
+		return ;
+	
+	int64_t	current_distance = square_root(distance_squared);
+	int64_t	distance_error = current_distance - desired_length;
+	
+	if (distance_error == 0)
+		return ;
+
+	int64_t	scaled_dir_x = (delta_x * solver_scale) / current_distance;
+	int64_t	scaled_dir_y = (delta_y * solver_scale) / current_distance;
+
+	int64_t	half_correction = distance_error / 2; //consider bitshift
+
+	if (a->pinned == FALSE) 
+	{
+		corr_x = (scaled_dir_x * half_correction) / solver_scale;	
+		corr_y = (scaled_dir_y * half_correction) / solver_scale;	
+
+		a->pos.x += corr_x;	
+		a->pos.y += corr_y;	
+		a->old.x += corr_x;	
+		a->old.y += corr_y;	
+
+	}
+	if (b->pinned == FALSE) 
+	{
+		corr_x = (scaled_dir_x * half_correction) / solver_scale;	
+		corr_y = (scaled_dir_y * half_correction) / solver_scale;	
+
+		b->pos.x -= corr_x;	
+		b->pos.y -= corr_y;	
+		b->old.x -= corr_x;	
+		b->old.y -= corr_y;	
+
+	}
+}
+
+void	integrate_points(t_cape *cape, int cape_len)
+{
+	int	gravity;
+	static int	sub_counter;
+	if (sub_counter % 10 == 0)
+		gravity = 1;
+	else
+		gravity = 0;
+	sub_counter++;
+	for (int i = 0; i <= cape_len - 1; i++)
+	{
+		if (cape[i].pinned == FALSE)
+		{
+			int vel_x = cape[i].pos.x - cape[i].old.x;
+			int vel_y = cape[i].pos.y - cape[i].old.y;
+
+			cape[i].old.x = cape[i].pos.x;
+			cape[i].old.y = cape[i].pos.y;
+
+			cape[i].pos.x += vel_x;
+			cape[i].pos.y += vel_y + gravity; // plussaa gravity tähän
+		}
+	}
+
+}
+
+void	init_cape(t_cape *cape, int cape_len, t_point player_pos)
+{
+	for (int i = 0; i < cape_len; i++)
+	{
+		cape[i].pos = player_pos;
+		cape[i].old = player_pos;
+		cape[i].pinned = FALSE;
+	}
+}
+
+//	replace magic numbers with constants
+void		cape(t_rend *rend, t_point player_pos, t_point camera)
+{
+		static	t_cape cape[30];
+	int		cape_len = 30;
+	int iterations = 20;
+	int	rest_len = 4;
+	static int init;
+	if (!init)
+		init_cape(cape, cape_len, player_pos);
+	init++;
+
+	cape[0].pos = player_pos;
+	cape[0].old = player_pos;
+	cape[0].pinned = TRUE;
+	integrate_points(cape, cape_len);
+//	if (!cape[1].pinned)
+//	{
+//   		cape[1].pos.x += (cape[0].pos.x - cape[1].pos.x) / 4;
+//    	cape[1].pos.y += (cape[0].pos.y - cape[1].pos.y) / 4;
+//		cape[1].old = cape[1].pos;
+//	}
+	
+	for(int iter_i = 0; iter_i < iterations; iter_i++)
+	{
+		for(int i = 0; i < cape_len - 1; i++)
+		{
+			distance_constraint(&cape[i], &cape[i + 1], rest_len);
+		}
+	}
+
+	for(int i = 0; i < cape_len - 1; i++)
+	{
+		draw_line(rend->win_buffer, world_point_to_rend_point(point_sub(cape[i].pos, camera)), world_point_to_rend_point(point_sub(cape[i +1].pos, camera)), 0xFFFF0000);
+	}
+//	draw_circle(rend->win_buffer, world_point_to_rend_point(cape[i]), 8, 0xFFFFFFFF);	
+}
+
+/*
 //	replace magic numbers with constants
 void		cape(t_rend *rend, t_point player_pos, t_point camera)
 {
@@ -316,22 +490,7 @@ void		cape(t_rend *rend, t_point player_pos, t_point camera)
 
 //	draw_circle(rend->win_buffer, world_point_to_rend_point(cape[i]), 8, 0xFFFFFFFF);	
 
-}
-
-bool	is_in_range(int pos_a, int pos_b, int	range)
-{
-	if (pos_a < pos_b + range && pos_a > pos_b - range)
-		return (TRUE);
-	return (FALSE);
-
-}
-
-bool	is_in_range_2d(t_point pos_a, t_point pos_b, t_point	range)
-{
-	if (is_in_range(pos_a.x, pos_b.x, range.x) && is_in_range(pos_a.y, pos_b.y, range.y))
-		return (TRUE);
-	return (FALSE);
-}
+}*/
 
 // Change logic for input detection once fresh_press and press_press for keyevents is implemented
 void spear_interaction(t_jump *jump)
@@ -519,12 +678,11 @@ void	player_logic(t_jump *jump, int accel, int top_velocity)
 	jump->player.vel		= gravity(jump->player.vel);
 	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
 	terrain_collision(&jump->player, &jump->map);
-//	jump->player.rend_pos 	= world_point_to_rend_point(point_sub(jump->player.pos, jump->camera.pos));
 }
 
 t_point	camera_follow(t_point pos, t_camera camera)
 {
-	int	speed = 112;
+	int	speed = 96;
 	int accel = 4;
 	int dead_zone = 256;
 
