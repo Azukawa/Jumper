@@ -348,7 +348,7 @@ typedef struct s_cape
 
 void		distance_constraint(t_cape *a, t_cape *b, int	desired_length)
 {
-	int64_t	solver_scale = 256;	// this is the resolution of simulation. Make in to define
+	int64_t	solver_scale = 32;	// this is the resolution of simulation. Make in to define
 
 	int64_t	delta_x = b->pos.x - a->pos.x;
 	int64_t	delta_y = b->pos.y - a->pos.y;
@@ -377,9 +377,6 @@ void		distance_constraint(t_cape *a, t_cape *b, int	desired_length)
 	{
 		b->pos.x -= (scaled_dir_x * half_correction) / solver_scale;	
 		b->pos.y -= (scaled_dir_y * half_correction) / solver_scale;	
-//		b->old.x -= corr_x;	
-//		b->old.y -= corr_y;	
-
 	}
 }
 
@@ -387,10 +384,10 @@ void	integrate_points(t_cape *cape, int cape_len)
 {
 	int	gravity;
 	static int	sub_counter;
-	if (sub_counter % 1 == 0)
-		gravity = 2;
-	else
-		gravity = 0;
+//	if (sub_counter % 1 == 0)
+		gravity = 1;
+//	else
+//		gravity = 0;
 	sub_counter++;
 	for (int i = 0; i <= cape_len - 1; i++)
 	{
@@ -420,16 +417,37 @@ void	init_cape(t_cape *cape, int cape_len, t_point player_pos)
 }
 
 //	replace magic numbers with constants
-void		cape(t_rend *rend, t_point player_pos, t_point camera)
+void		cape(t_rend *rend, t_point player_pos, t_point player_vel, t_point camera)
 {
 		static	t_cape cape[30];
 	int		cape_len = 30;
-	int iterations = 50;
-	int	rest_len = 24;
+	int iterations = 5;
+	int	rest_len = 32;
 	static int init;
 	if (!init)
 		init_cape(cape, cape_len, player_pos);
 	init++;
+	int		j = 29;
+	if(abs(player_vel.x) > 0 || abs(player_vel.y) > 0)
+	{
+		while(j > 0)
+		{
+			cape[j].old = cape[j].pos;
+			cape[j] = cape[j - 1];
+			cape[j].pinned = TRUE;
+			j--;
+		}
+	}
+	else
+	{	
+		j = 1;
+		while(j < cape_len)
+		{
+			cape[j].pinned = FALSE;
+//			cape[j].old = cape[j].pos;
+			j++;
+		}
+	}
 
 	cape[0].pos = player_pos;
 	cape[0].old = player_pos;
@@ -446,6 +464,7 @@ void		cape(t_rend *rend, t_point player_pos, t_point camera)
 	{
 		for(int i = 0; i < cape_len - 1; i++)
 		{
+	//		cape[i + 1].pinned = FALSE;
 			distance_constraint(&cape[i], &cape[i + 1], rest_len);
 		}
 	}
@@ -454,7 +473,7 @@ void		cape(t_rend *rend, t_point player_pos, t_point camera)
 	{
 		draw_line(rend->win_buffer, world_point_to_rend_point(point_sub(cape[i].pos, camera)), world_point_to_rend_point(point_sub(cape[i +1].pos, camera)), 0xFFFF0000);
 	}
-//	draw_circle(rend->win_buffer, world_point_to_rend_point(cape[i]), 8, 0xFFFFFFFF);	
+//	draw_circle(rend->win_buffer, world_point_to_rend_point(point_sub(cape[29].pos, camera)), 8, 0xFFFFFFFF);	
 }
 
 /*
@@ -713,7 +732,7 @@ void	game_logic(t_rend *rend, t_jump *jump)
 	update_camera(&jump->player, &jump->camera);
 	draw_player(rend, &jump->player, &jump->camera);
 	draw_terrain(rend, &jump->map, &jump->camera.pos);	
-	cape(rend, jump->player.pos, jump->camera.pos);
+	cape(rend, jump->player.pos, jump->player.vel, jump->camera.pos);
 //	spear_logic(jump);
 //	draw_spear(rend, jump);
 	clear_input_masks(&jump->fresh_keys, &jump->press_keys);
