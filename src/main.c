@@ -348,9 +348,7 @@ typedef struct s_cape
 
 void		distance_constraint(t_cape *a, t_cape *b, int	desired_length)
 {
-	int64_t corr_x = 0;
-	int64_t corr_y = 0;
-	int64_t	solver_scale = 64;	// this is the resolution of simulation. Make in to define
+	int64_t	solver_scale = 256;	// this is the resolution of simulation. Make in to define
 
 	int64_t	delta_x = b->pos.x - a->pos.x;
 	int64_t	delta_y = b->pos.y - a->pos.y;
@@ -372,24 +370,15 @@ void		distance_constraint(t_cape *a, t_cape *b, int	desired_length)
 
 	if (a->pinned == FALSE) 
 	{
-		corr_x = (scaled_dir_x * half_correction) / solver_scale;	
-		corr_y = (scaled_dir_y * half_correction) / solver_scale;	
-
-		a->pos.x += corr_x;	
-		a->pos.y += corr_y;	
-		a->old.x += corr_x;	
-		a->old.y += corr_y;	
-
+		a->pos.x += (scaled_dir_x * half_correction) / solver_scale;	
+		a->pos.y += (scaled_dir_y * half_correction) / solver_scale;	
 	}
 	if (b->pinned == FALSE) 
 	{
-		corr_x = (scaled_dir_x * half_correction) / solver_scale;	
-		corr_y = (scaled_dir_y * half_correction) / solver_scale;	
-
-		b->pos.x -= corr_x;	
-		b->pos.y -= corr_y;	
-		b->old.x -= corr_x;	
-		b->old.y -= corr_y;	
+		b->pos.x -= (scaled_dir_x * half_correction) / solver_scale;	
+		b->pos.y -= (scaled_dir_y * half_correction) / solver_scale;	
+//		b->old.x -= corr_x;	
+//		b->old.y -= corr_y;	
 
 	}
 }
@@ -398,8 +387,8 @@ void	integrate_points(t_cape *cape, int cape_len)
 {
 	int	gravity;
 	static int	sub_counter;
-	if (sub_counter % 10 == 0)
-		gravity = 1;
+	if (sub_counter % 1 == 0)
+		gravity = 2;
 	else
 		gravity = 0;
 	sub_counter++;
@@ -435,8 +424,8 @@ void		cape(t_rend *rend, t_point player_pos, t_point camera)
 {
 		static	t_cape cape[30];
 	int		cape_len = 30;
-	int iterations = 20;
-	int	rest_len = 4;
+	int iterations = 50;
+	int	rest_len = 24;
 	static int init;
 	if (!init)
 		init_cape(cape, cape_len, player_pos);
