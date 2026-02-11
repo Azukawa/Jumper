@@ -385,7 +385,7 @@ void	integrate_points(t_cape *cape, int cape_len)
 	int	gravity;
 	static int	sub_counter;
 //	if (sub_counter % 1 == 0)
-		gravity = 1;
+		gravity = 2;
 //	else
 //		gravity = 0;
 	sub_counter++;
@@ -399,8 +399,8 @@ void	integrate_points(t_cape *cape, int cape_len)
 			cape[i].old.x = cape[i].pos.x;
 			cape[i].old.y = cape[i].pos.y;
 
-			cape[i].pos.x += vel_x;
-			cape[i].pos.y += vel_y + gravity; // plussaa gravity tähän
+			cape[i].pos.x += vel_x / 2;		// this division makes rope less springy
+			cape[i].pos.y += vel_y  / 2 + gravity; // plussaa gravity tähän
 		}
 	}
 
@@ -428,6 +428,7 @@ void		cape(t_rend *rend, t_point player_pos, t_point player_vel, t_point camera)
 		init_cape(cape, cape_len, player_pos);
 	init++;
 	int		j = 29;
+/*
 	if(abs(player_vel.x) > 0 || abs(player_vel.y) > 0)
 	{
 		while(j > 0)
@@ -448,7 +449,7 @@ void		cape(t_rend *rend, t_point player_pos, t_point player_vel, t_point camera)
 			j++;
 		}
 	}
-
+*/
 	cape[0].pos = player_pos;
 	cape[0].old = player_pos;
 	cape[0].pinned = TRUE;
