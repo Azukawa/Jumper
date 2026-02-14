@@ -428,8 +428,8 @@ void		cape(t_rend *rend, t_point player_pos, t_point player_vel, t_point camera)
 		init_cape(cape, cape_len, player_pos);
 	init++;
 	int		j = 29;
-/*
-	if(abs(player_vel.x) > 0 || abs(player_vel.y) > 0)
+
+	if(abs(player_vel.x) > 16 || abs(player_vel.y) > 16)
 	{
 		while(j > 0)
 		{
@@ -449,17 +449,17 @@ void		cape(t_rend *rend, t_point player_pos, t_point player_vel, t_point camera)
 			j++;
 		}
 	}
-*/
+
 	cape[0].pos = player_pos;
 	cape[0].old = player_pos;
 	cape[0].pinned = TRUE;
 	integrate_points(cape, cape_len);
-//	if (!cape[1].pinned)
-//	{
-//   		cape[1].pos.x += (cape[0].pos.x - cape[1].pos.x) / 4;
-//    	cape[1].pos.y += (cape[0].pos.y - cape[1].pos.y) / 4;
-//		cape[1].old = cape[1].pos;
-//	}
+	if (!cape[1].pinned)
+	{
+   		cape[1].pos.x += (cape[0].pos.x - cape[1].pos.x) / 4;
+    	cape[1].pos.y += (cape[0].pos.y - cape[1].pos.y) / 4;
+		cape[1].old = cape[1].pos;
+	}
 	
 	for(int iter_i = 0; iter_i < iterations; iter_i++)
 	{
