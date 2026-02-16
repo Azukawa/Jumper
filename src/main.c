@@ -1,7 +1,8 @@
 #include "jumper.h"
 t_obj init_player();
 t_obj init_spear();
-void	terrain_collision(t_obj *obj, t_map *map);
+void	terrain_collision_x(t_obj *obj, t_map *map);
+void	terrain_collision_y(t_obj *obj, t_map *map);
 
 void	getout(const char *s)
 {
@@ -477,30 +478,6 @@ void		cape(t_rend *rend, t_point player_pos, t_point player_vel, t_point camera)
 //	draw_circle(rend->win_buffer, world_point_to_rend_point(point_sub(cape[29].pos, camera)), 8, 0xFFFFFFFF);	
 }
 
-/*
-//	replace magic numbers with constants
-void		cape(t_rend *rend, t_point player_pos, t_point camera)
-{
-	static	t_point cape[30];
-	int		i = 29;
-
-	while(i > 0)
-	{
-		cape[i] = cape[i - 1];
-		i--;
-	}
-	cape[0] = player_pos;
-	i = 0;
-	while (i < 29)
-	{
-		draw_line(rend->win_buffer, world_point_to_rend_point(point_sub(cape[i], camera)), world_point_to_rend_point(point_sub(cape[i +1], camera)), 0xFFFF0000);
-		i++;
-	}
-
-//	draw_circle(rend->win_buffer, world_point_to_rend_point(cape[i]), 8, 0xFFFFFFFF);	
-
-}*/
-
 // Change logic for input detection once fresh_press and press_press for keyevents is implemented
 void spear_interaction(t_jump *jump)
 {
@@ -645,41 +622,14 @@ void	terrain_collision_x(t_obj *obj, t_map *map)
 	if(half_obj_h < 1)
 		half_obj_h = 1;
 	int y = (((obj->pos.y) - map_origo.y) / tile_world_size);
-	int x = (((obj->pos.x) - map_origo.x) / tile_world_size);
+//	int x = (((obj->pos.x) - map_origo.x) / tile_world_size);
 	int left_x = (((obj->pos.x - half_obj_w) - map_origo.x) / tile_world_size);
 	int right_x = (((obj->pos.x + half_obj_w - 1) - map_origo.x) / tile_world_size);
-	int head_y = (((obj->pos.y - half_obj_h) - map_origo.y) / tile_world_size);
-	int feet_y = (((obj->pos.y + half_obj_h) - map_origo.y) / tile_world_size);
-	t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-	t_point	b = point_add(a, tile_size);
-/*
-	//	Floor
-	if	(obj->vel.y > 0 && \
-		x < map->x && x >= 0 && \
-		feet_y < map->y && feet_y >= 0 && \
-		(map->map[left_x + feet_y * map->x] == 'X' || map->map[right_x + feet_y * map->x] == 'X' || map->map[x + feet_y * map->x] == 'X' )) 
-	{
-		t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-		t_point	b = point_add(a, tile_size);
+//	int head_y = (((obj->pos.y - half_obj_h) - map_origo.y) / tile_world_size);
+//	int feet_y = (((obj->pos.y + half_obj_h) - map_origo.y) / tile_world_size);
+//	t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
+//	t_point	b = point_add(a, tile_size);
 
-		obj->pos.y = a.y + half_obj_h;
-//		obj->pos.y = a.y;
-		obj->vel.y = 0;
-		if(obj->type == TYPE_PLAYER)
-			obj->jumps = obj->max_jumps;
-	}
-//	Ceiling
-	if	(obj->vel.y < 0 && \
-		x < map->x && x >= 0 && head_y < map->y && head_y >= 0 && \
-		(map->map[left_x + head_y * map->x] == 'X' || map->map[right_x + head_y * map->x] == 'X')) 
-	{
-	t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-	t_point	b = point_add(a, tile_size);
-
-		obj->pos.y = a.y + half_obj_h;
-		obj->vel.y = -obj->vel.y >> 1;
-	}
-*/
 	//	Left wall
 	if	(obj->vel.x < 0 && \
 		left_x < map->x && left_x >= 0 && y < map->y && y >= 0 && \
@@ -703,7 +653,7 @@ void	terrain_collision_x(t_obj *obj, t_map *map)
 		map->map[right_x + y * map->x] == 'X') 
 	{
 		t_point	a = point_add((t_point){tile_size.x * right_x, tile_size.y * y}, map_origo);
-		t_point	b = point_add(a, tile_size);
+//		t_point	b = point_add(a, tile_size);
 
 		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100)
 		{
@@ -713,7 +663,6 @@ void	terrain_collision_x(t_obj *obj, t_map *map)
 		else
 			obj->vel.x = -(obj->vel.x >> 1);
 		obj->pos.x = a.x - half_obj_w;
-	//	obj->pos.x = b.x - half_obj_w;
 	}
 //	printf("x = %d\ty = %d\tpos.x = %d\tpos.y = %d\n", x, y, obj->pos.x, obj->pos.y);
 }
@@ -739,8 +688,8 @@ void	terrain_collision_y(t_obj *obj, t_map *map)
 	int right_x = (((obj->pos.x + half_obj_w - 1) - map_origo.x) / tile_world_size);
 	int head_y = (((obj->pos.y - half_obj_h) - map_origo.y) / tile_world_size);
 	int feet_y = (((obj->pos.y + half_obj_h) - map_origo.y) / tile_world_size);
-	t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-	t_point	b = point_add(a, tile_size);
+//	t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
+//	t_point	b = point_add(a, tile_size);
 	//	Floor
 	if	(obj->vel.y > 0 && \
 		x < map->x && x >= 0 && \
@@ -748,7 +697,7 @@ void	terrain_collision_y(t_obj *obj, t_map *map)
 		(map->map[left_x + feet_y * map->x] == 'X' || map->map[right_x + feet_y * map->x] == 'X' || map->map[x + feet_y * map->x] == 'X' )) 
 	{
 		t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-		t_point	b = point_add(a, tile_size);
+//		t_point	b = point_add(a, tile_size);
 
 		obj->pos.y = a.y + half_obj_h;
 //		obj->pos.y = a.y;
@@ -762,49 +711,11 @@ void	terrain_collision_y(t_obj *obj, t_map *map)
 		(map->map[left_x + head_y * map->x] == 'X' || map->map[right_x + head_y * map->x] == 'X')) 
 	{
 	t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-	t_point	b = point_add(a, tile_size);
+//	t_point	b = point_add(a, tile_size);
 
 		obj->pos.y = a.y + half_obj_h;
 		obj->vel.y = -obj->vel.y >> 1;
 	}
-/*
-	//	Left wall
-	if	(obj->vel.x < 0 && \
-		left_x < map->x && left_x >= 0 && y < map->y && y >= 0 && \
-		map->map[left_x + y * map->x] == 'X') 
-	{
-	t_point	a = point_add((t_point){tile_size.x * left_x, tile_size.y * y}, map_origo);
-	t_point	b = point_add(a, tile_size);
-
-		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100) // if thrown fast, spear gets stuck
-		{
-			obj->stuck = TRUE;
-			obj->vel = (t_point){0, 0};
-		}
-		else									
-			obj->vel.x = -(obj->vel.x >> 1);
-		obj->pos.x = b.x + half_obj_w;
-	}
-	// Right wall
-	if	(obj->vel.x > 0 && \
-		right_x < map->x && right_x >= 0 && y < map->y && y >= 0 && \
-		map->map[right_x + y * map->x] == 'X') 
-	{
-		t_point	a = point_add((t_point){tile_size.x * right_x, tile_size.y * y}, map_origo);
-		t_point	b = point_add(a, tile_size);
-
-		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100)
-		{
-			obj->stuck = TRUE;
-			obj->vel = (t_point){0, 0};
-		}
-		else
-			obj->vel.x = -(obj->vel.x >> 1);
-		obj->pos.x = a.x - half_obj_w;
-	//	obj->pos.x = b.x - half_obj_w;
-	}
-*/
-//	printf("x = %d\ty = %d\tpos.x = %d\tpos.y = %d\n", x, y, obj->pos.x, obj->pos.y);
 }
 
 void	player_logic(t_jump *jump, int accel, int top_velocity)
@@ -857,14 +768,14 @@ void	game_logic(t_rend *rend, t_jump *jump)
 	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
 
 	player_logic(jump, accel, top_velocity);
-//	spear_logic(jump);
+	spear_logic(jump);
 
 	update_camera(&jump->player, &jump->camera);
 
 	draw_player(rend, &jump->player, &jump->camera);
 	draw_terrain(rend, &jump->map, &jump->camera.pos);	
 	cape(rend, jump->player.pos, jump->player.vel, jump->camera.pos);
-//	draw_spear(rend, &jump->spear, &jump->camera);
+	draw_spear(rend, &jump->spear, &jump->camera);
 	clear_input_masks(&jump->fresh_keys, &jump->press_keys);
 }
 
