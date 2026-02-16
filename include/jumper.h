@@ -72,6 +72,13 @@ typedef struct	s_map
 	int	x;
 	int y;
 
+	int	tile_rend_size;
+	int	tile_world_size;
+	t_point	tile_size;
+	t_point	map_origo;
+
+
+
 }				t_map;
 
 typedef struct	s_obj{

@@ -46,7 +46,13 @@ t_map	init_map()
 				"X0000X0000000000000X"
 				"X0000X0000000000000X"
 				"XXXXXXXXXXXXXXXXXXXX";
-		return (map);
+
+	map.tile_rend_size = 16;
+	map.tile_world_size = map.tile_rend_size << 4;
+	map.tile_size = (t_point){map.tile_world_size, map.tile_world_size};
+	map.map_origo = (t_point){-1280, 0};
+
+	return (map);
 }
 
 
@@ -587,20 +593,16 @@ void	draw_spear(t_rend *rend, t_obj *spear, t_camera *camera)
 
 void	draw_terrain(t_rend *rend, t_map *map, t_point *camera)
 {
-	int	tile_rend_size = 16;
-	int	tile_world_size = tile_rend_size << 4;
-	t_point	tile_size = {tile_world_size, tile_world_size};
 	t_point	a = {0, 0};
-	t_point	b = point_add(a, tile_size);
-	t_point	map_origo = {-1280, 0};
-	map_origo = point_sub(map_origo, *camera);
+	t_point	b = {0,0};
+	t_point map_origo = point_sub(map->map_origo, *camera);
 
 	for(int y = 0; y < map->y; y++)
 	{
 		for(int x = 0; x < map->x; x++)
 		{
-			a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-			b = point_add(a, tile_size);
+			a = point_add((t_point){map->tile_size.x * x, map->tile_size.y * y}, map_origo);
+			b = point_add(a, map->tile_size);
 			if(map->map[x + y * map->x] == 'X')
 				draw_square(world_point_to_rend_point(a), world_point_to_rend_point(b), rend->win_buffer, 0x08FF00FF);
 		}
@@ -609,34 +611,23 @@ void	draw_terrain(t_rend *rend, t_map *map, t_point *camera)
 
 void	terrain_collision_x(t_obj *obj, t_map *map)
 {	
-	int	tile_rend_size = 16;
-	int	tile_world_size = tile_rend_size << 4;
-	t_point	tile_size = {tile_world_size, tile_world_size};
-	t_point	map_origo = {-1280, 0};
 	int	half_obj_w = ((obj->size.x >> 1) << 4); 
-//	int	half_obj_w = (obj->size.x << 3); 
 	if(half_obj_w < 1)
 		half_obj_w = 1;
 	int	half_obj_h = ((obj->size.y >> 1) << 4);	// change this to << 3 
-//	int	half_obj_h = (obj->size.y  << 3);	// change this to << 3 
 	if(half_obj_h < 1)
 		half_obj_h = 1;
-	int y = (((obj->pos.y) - map_origo.y) / tile_world_size);
-//	int x = (((obj->pos.x) - map_origo.x) / tile_world_size);
-	int left_x = (((obj->pos.x - half_obj_w) - map_origo.x) / tile_world_size);
-	int right_x = (((obj->pos.x + half_obj_w - 1) - map_origo.x) / tile_world_size);
-//	int head_y = (((obj->pos.y - half_obj_h) - map_origo.y) / tile_world_size);
-//	int feet_y = (((obj->pos.y + half_obj_h) - map_origo.y) / tile_world_size);
-//	t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-//	t_point	b = point_add(a, tile_size);
+	int y = (((obj->pos.y) - map->map_origo.y) / map->tile_world_size);
+	int left_x = (((obj->pos.x - half_obj_w) - map->map_origo.x) / map->tile_world_size);
+	int right_x = (((obj->pos.x + half_obj_w - 1) - map->map_origo.x) / map->tile_world_size);
 
 	//	Left wall
 	if	(obj->vel.x < 0 && \
 		left_x < map->x && left_x >= 0 && y < map->y && y >= 0 && \
 		map->map[left_x + y * map->x] == 'X') 
 	{
-	t_point	a = point_add((t_point){tile_size.x * left_x, tile_size.y * y}, map_origo);
-	t_point	b = point_add(a, tile_size);
+	t_point	a = point_add((t_point){map->tile_size.x * left_x, map->tile_size.y * y}, map->map_origo);
+	t_point	b = point_add(a, map->tile_size);
 
 		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100) // if thrown fast, spear gets stuck
 		{
@@ -652,8 +643,7 @@ void	terrain_collision_x(t_obj *obj, t_map *map)
 		right_x < map->x && right_x >= 0 && y < map->y && y >= 0 && \
 		map->map[right_x + y * map->x] == 'X') 
 	{
-		t_point	a = point_add((t_point){tile_size.x * right_x, tile_size.y * y}, map_origo);
-//		t_point	b = point_add(a, tile_size);
+		t_point	a = point_add((t_point){map->tile_size.x * right_x, map->tile_size.y * y}, map->map_origo);
 
 		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100)
 		{
@@ -670,37 +660,27 @@ void	terrain_collision_x(t_obj *obj, t_map *map)
 //	player needs hitbox
 void	terrain_collision_y(t_obj *obj, t_map *map)
 {	
-	int	tile_rend_size = 16;
-	int	tile_world_size = tile_rend_size << 4;
-	t_point	tile_size = {tile_world_size, tile_world_size};
-	t_point	map_origo = {-1280, 0};
 	int	half_obj_w = ((obj->size.x >> 1) << 4); 
-//	int	half_obj_w = (obj->size.x << 3); 
 	if(half_obj_w < 1)
 		half_obj_w = 1;
 	int	half_obj_h = ((obj->size.y >> 1) << 4);	// change this to << 3 
-//	int	half_obj_h = (obj->size.y  << 3);	// change this to << 3 
 	if(half_obj_h < 1)
 		half_obj_h = 1;
-	int y = (((obj->pos.y) - map_origo.y) / tile_world_size);
-	int x = (((obj->pos.x) - map_origo.x) / tile_world_size);
-	int left_x = (((obj->pos.x - half_obj_w) - map_origo.x) / tile_world_size);
-	int right_x = (((obj->pos.x + half_obj_w - 1) - map_origo.x) / tile_world_size);
-	int head_y = (((obj->pos.y - half_obj_h) - map_origo.y) / tile_world_size);
-	int feet_y = (((obj->pos.y + half_obj_h) - map_origo.y) / tile_world_size);
-//	t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-//	t_point	b = point_add(a, tile_size);
+	int y = (((obj->pos.y) - map->map_origo.y) / map->tile_world_size);
+	int x = (((obj->pos.x) - map->map_origo.x) / map->tile_world_size);
+	int left_x = (((obj->pos.x - half_obj_w) - map->map_origo.x) / map->tile_world_size);
+	int right_x = (((obj->pos.x + half_obj_w - 1) - map->map_origo.x) / map->tile_world_size);
+	int head_y = (((obj->pos.y - half_obj_h) - map->map_origo.y) / map->tile_world_size);
+	int feet_y = (((obj->pos.y + half_obj_h) - map->map_origo.y) / map->tile_world_size);
 	//	Floor
 	if	(obj->vel.y > 0 && \
 		x < map->x && x >= 0 && \
 		feet_y < map->y && feet_y >= 0 && \
 		(map->map[left_x + feet_y * map->x] == 'X' || map->map[right_x + feet_y * map->x] == 'X' || map->map[x + feet_y * map->x] == 'X' )) 
 	{
-		t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-//		t_point	b = point_add(a, tile_size);
+		t_point	a = point_add((t_point){map->tile_size.x * x, map->tile_size.y * y}, map->map_origo);
 
 		obj->pos.y = a.y + half_obj_h;
-//		obj->pos.y = a.y;
 		obj->vel.y = 0;
 		if(obj->type == TYPE_PLAYER)
 			obj->jumps = obj->max_jumps;
@@ -710,8 +690,7 @@ void	terrain_collision_y(t_obj *obj, t_map *map)
 		x < map->x && x >= 0 && head_y < map->y && head_y >= 0 && \
 		(map->map[left_x + head_y * map->x] == 'X' || map->map[right_x + head_y * map->x] == 'X')) 
 	{
-	t_point	a = point_add((t_point){tile_size.x * x, tile_size.y * y}, map_origo);
-//	t_point	b = point_add(a, tile_size);
+	t_point	a = point_add((t_point){map->tile_size.x * x, map->tile_size.y * y}, map->map_origo);
 
 		obj->pos.y = a.y + half_obj_h;
 		obj->vel.y = -obj->vel.y >> 1;
