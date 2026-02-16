@@ -68,12 +68,12 @@ typedef struct s_rend
 
 typedef struct	s_map
 {
-	char *map;
-	int	x;
-	int y;
+	char	*map;
+	int		x;
+	int		y;
 
-	int	tile_rend_size;
-	int	tile_world_size;
+	int		tile_rend_size;
+	int		tile_world_size;
 	t_point	tile_size;
 	t_point	map_origo;
 

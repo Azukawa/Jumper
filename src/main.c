@@ -223,14 +223,14 @@ void	update_player_velocity(t_jump *jump, int speed, int top_velocity)
 	jump->player.vel.x = approach(jump->player.vel.x, target_speed.x, speed);
 }
 
-// TODO Replace the hardcoded subpixels value with constant.
-// >> 5 = 32 subpixels. >> 4 = 16 subpixels
+//	the + 8 moves the center of the world point to the center of the pixel,
+//	which helps to eliminate jitter
 static inline t_point	world_point_to_rend_point(t_point point)
 {
 	t_point ret;
 
-	ret.x = (point.x >> 4) + (LOGIC_W >> 1); 
-	ret.y = (point.y >> 4) + (LOGIC_H >> 1); 
+	ret.x = ((point.x + 8) >> 4) + (LOGIC_W >> 1); 
+	ret.y = ((point.y + 8) >> 4) + (LOGIC_H >> 1); 
 
 	return (ret);
 }
@@ -626,8 +626,8 @@ void	terrain_collision_x(t_obj *obj, t_map *map)
 		left_x < map->x && left_x >= 0 && y < map->y && y >= 0 && \
 		map->map[left_x + y * map->x] == 'X') 
 	{
-	t_point	a = point_add((t_point){map->tile_size.x * left_x, map->tile_size.y * y}, map->map_origo);
-	t_point	b = point_add(a, map->tile_size);
+		t_point	a = point_add((t_point){map->tile_size.x * left_x, map->tile_size.y * y}, map->map_origo);
+		t_point	b = point_add(a, map->tile_size);
 
 		if (obj->type == TYPE_SPEAR && abs(obj->vel.x) > 100) // if thrown fast, spear gets stuck
 		{
@@ -639,7 +639,7 @@ void	terrain_collision_x(t_obj *obj, t_map *map)
 		obj->pos.x = b.x + half_obj_w;
 	}
 	// Right wall
-	if	(obj->vel.x > 0 && \
+	else if	(obj->vel.x > 0 && \
 		right_x < map->x && right_x >= 0 && y < map->y && y >= 0 && \
 		map->map[right_x + y * map->x] == 'X') 
 	{
@@ -672,6 +672,7 @@ void	terrain_collision_y(t_obj *obj, t_map *map)
 	int right_x = (((obj->pos.x + half_obj_w - 1) - map->map_origo.x) / map->tile_world_size);
 	int head_y = (((obj->pos.y - half_obj_h) - map->map_origo.y) / map->tile_world_size);
 	int feet_y = (((obj->pos.y + half_obj_h) - map->map_origo.y) / map->tile_world_size);
+
 	//	Floor
 	if	(obj->vel.y > 0 && \
 		x < map->x && x >= 0 && \
@@ -679,19 +680,18 @@ void	terrain_collision_y(t_obj *obj, t_map *map)
 		(map->map[left_x + feet_y * map->x] == 'X' || map->map[right_x + feet_y * map->x] == 'X' || map->map[x + feet_y * map->x] == 'X' )) 
 	{
 		t_point	a = point_add((t_point){map->tile_size.x * x, map->tile_size.y * y}, map->map_origo);
-
 		obj->pos.y = a.y + half_obj_h;
 		obj->vel.y = 0;
 		if(obj->type == TYPE_PLAYER)
 			obj->jumps = obj->max_jumps;
 	}
+
 //	Ceiling
-	if	(obj->vel.y < 0 && \
+	else if	(obj->vel.y < 0 && \
 		x < map->x && x >= 0 && head_y < map->y && head_y >= 0 && \
 		(map->map[left_x + head_y * map->x] == 'X' || map->map[right_x + head_y * map->x] == 'X')) 
 	{
-	t_point	a = point_add((t_point){map->tile_size.x * x, map->tile_size.y * y}, map->map_origo);
-
+		t_point	a = point_add((t_point){map->tile_size.x * x, map->tile_size.y * y}, map->map_origo);
 		obj->pos.y = a.y + half_obj_h;
 		obj->vel.y = -obj->vel.y >> 1;
 	}
@@ -743,6 +743,8 @@ void	update_camera(t_obj *player, t_camera *camera)
 
 void	game_logic(t_rend *rend, t_jump *jump)
 {
+//	int		accel				= 2;
+//	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
 	int		accel				= 2;
 	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
 
@@ -751,10 +753,10 @@ void	game_logic(t_rend *rend, t_jump *jump)
 
 	update_camera(&jump->player, &jump->camera);
 
-	draw_player(rend, &jump->player, &jump->camera);
-	draw_terrain(rend, &jump->map, &jump->camera.pos);	
+//	draw_player(rend, &jump->player, &jump->camera);
+//	draw_terrain(rend, &jump->map, &jump->camera.pos);	
 	cape(rend, jump->player.pos, jump->player.vel, jump->camera.pos);
-	draw_spear(rend, &jump->spear, &jump->camera);
+//	draw_spear(rend, &jump->spear, &jump->camera);
 	clear_input_masks(&jump->fresh_keys, &jump->press_keys);
 }
 
@@ -786,7 +788,14 @@ static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
 		new_ticks++;
 	}
 	if(new_ticks != 0)
+	{
+		draw_player(rend, &jump->player, &jump->camera);
+		draw_terrain(rend, &jump->map, &jump->camera.pos);	
+	//	cape(rend, jump->player.pos, jump->player.vel, jump->camera.pos);
+		draw_spear(rend, &jump->spear, &jump->camera);
+
 		draw_2_window(rend);
+	}
 	fps_counter(new_ticks);
 	SDL_Delay(1);
 	
