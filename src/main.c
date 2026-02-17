@@ -227,7 +227,7 @@ void	update_player_velocity(t_jump *jump, int speed, int top_velocity)
 }
 
 //	the + 8 moves the center of the world point to the center of the pixel
-static inline t_point	world_point_to_rend_point(t_point point)
+t_point	world_point_to_rend_point(t_point point)
 {
 	t_point ret;
 
@@ -318,161 +318,6 @@ bool	is_in_range_2d(t_point pos_a, t_point pos_b, t_point	range)
 		return (TRUE);
 	return (FALSE);
 }
-
-// this function is from think geek
-int64_t square_root(int64_t n)
-{
-    // Find MSB(Most significant Bit) of N
-    int64_t msb = (int64_t)(log2(n));
-
-    // (a = 2^msb)
-    int64_t a = 1 << msb;
-    int64_t result = 0;
-    while (a != 0) {
-		// Check whether the current value
-		// of 'a' can be added or not
-		if ((result + a) * (result + a) <= n) {
-			result += a;
-		}
-
-		// (a = a/2)
-		a >>= 1;
-    }
-    // Return the result
-    return result;
-}
-
-
-void		distance_constraint(t_link *a, t_link *b, int	desired_length)
-{
-	int64_t	solver_scale = 32;	// this is the resolution of simulation. Make in to define
-
-	int64_t	delta_x = b->pos.x - a->pos.x;
-	int64_t	delta_y = b->pos.y - a->pos.y;
-
-	int64_t	distance_squared = delta_x * delta_x + delta_y * delta_y;
-	if (distance_squared == 0)
-		return ;
-	
-	int64_t	current_distance = square_root(distance_squared);
-	int64_t	distance_error = current_distance - desired_length;
-	
-	if (distance_error == 0)
-		return ;
-
-	int64_t	scaled_dir_x = (delta_x * solver_scale) / current_distance;
-	int64_t	scaled_dir_y = (delta_y * solver_scale) / current_distance;
-
-	int64_t	half_correction = distance_error / 2; //consider bitshift
-
-	if (a->pinned == FALSE) 
-	{
-		a->pos.x += (scaled_dir_x * half_correction) / solver_scale;	
-		a->pos.y += (scaled_dir_y * half_correction) / solver_scale;	
-	}
-	if (b->pinned == FALSE) 
-	{
-		b->pos.x -= (scaled_dir_x * half_correction) / solver_scale;	
-		b->pos.y -= (scaled_dir_y * half_correction) / solver_scale;	
-	}
-}
-
-void	integrate_points(t_link *cape, int cape_len)
-{
-	int	gravity;
-	static int	sub_counter;
-//	if (sub_counter % 1 == 0)
-		gravity = 2;
-//	else
-//		gravity = 0;
-	sub_counter++;
-	for (int i = 0; i <= cape_len - 1; i++)
-	{
-		if (cape[i].pinned == FALSE)
-		{
-			int vel_x = cape[i].pos.x - cape[i].old.x;
-			int vel_y = cape[i].pos.y - cape[i].old.y;
-
-			cape[i].old.x = cape[i].pos.x;
-			cape[i].old.y = cape[i].pos.y;
-
-			cape[i].pos.x += vel_x / 2;		// this division makes rope less springy
-			cape[i].pos.y += vel_y  / 2 + gravity; // plussaa gravity tähän
-		}
-	}
-
-}
-
-void	init_cape(t_cape *cape, t_point player_pos)
-{
-	cape->cape_len = 30;
-	cape->rest_len = 32;
-	for (int i = 0; i < cape->cape_len; i++)
-	{
-		cape->link[i].pos		= player_pos;
-		cape->link[i].old		= player_pos;
-		cape->link[i].pinned	= FALSE;
-	}
-}
-
-//	replace magic numbers with constants
-void		calculate_cape(t_point player_pos, t_point player_vel, t_cape* cape)
-{
-	int			cape_len = cape->cape_len;
-	int			rest_len = cape->rest_len;
-	int 		iterations = 5;
-	int		j = 29;
-
-	if(abs(player_vel.x) > 16 || abs(player_vel.y) > 16)
-	{
-		while(j > 0)
-		{
-			cape->link[j].old = cape->link[j].pos;
-			cape->link[j] = cape->link[j - 1];
-			cape->link[j].pinned = TRUE;
-			j--;
-		}
-	}
-	else
-	{	
-		j = 1;
-		while(j < cape_len)
-		{
-			cape->link[j].pinned = FALSE;
-//			cape[j].old = cape[j].pos;
-			j++;
-		}
-	}
-
-	cape->link[0].pos = player_pos;
-	cape->link[0].old = player_pos;
-	cape->link[0].pinned = TRUE;
-	integrate_points(cape->link, cape_len);
-	if (!cape->link[1].pinned)
-	{
-   		cape->link[1].pos.x += (cape->link[0].pos.x - cape->link[1].pos.x) / 4;
-    	cape->link[1].pos.y += (cape->link[0].pos.y - cape->link[1].pos.y) / 4;
-		cape->link[1].old = cape->link[1].pos;
-	}
-	
-	for(int iter_i = 0; iter_i < iterations; iter_i++)
-	{
-		for(int i = 0; i < cape_len - 1; i++)
-		{
-	//		cape[i + 1].pinned = FALSE;
-			distance_constraint(&cape->link[i], &cape->link[i + 1], rest_len);
-		}
-	}
-}
-
-void	draw_cape(t_rend *rend, t_cape *cape, t_point camera)
-{
-	for(int i = 0; i < cape->cape_len - 1; i++)
-	{
-		draw_line(rend->win_buffer, world_point_to_rend_point(point_sub(cape->link[i].pos, camera)), world_point_to_rend_point(point_sub(cape->link[i +1].pos, camera)), 0xFFFF0000);
-	}
-}
-
 // Change logic for input detection once fresh_press and press_press for keyevents is implemented
 void spear_interaction(t_jump *jump)
 {
@@ -569,9 +414,6 @@ void	spear_logic(t_jump *jump)
 	if(jump->spear.stuck == FALSE && jump->spear.held == FALSE)
 		jump->spear.vel		= gravity(jump->spear.vel);
 	jump->spear.pos			= point_add(jump->spear.pos, jump->spear.vel);
-//							  collision(&jump->spear);
-						//	terrain_collision_x(&jump->spear, &jump->map);
-						//	terrain_collision_y(&jump->spear, &jump->map);
 							terrain_collision(&jump->spear, &jump->map);
 }
 

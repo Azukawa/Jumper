@@ -135,5 +135,9 @@ void		draw_circle(t_buffer *buf, t_point p, int r, uint32_t color);
 void		draw_filled_circle(t_buffer *buf, t_point p, int r, uint32_t color);
 void		draw_square(t_point a, t_point b, t_buffer *buf, int color);
 int			ft_clamp(int min, int max, int nb);
-
+void		draw_cape(t_rend *rend, t_cape *cape, t_point camera);
+void		calculate_cape(t_point player_pos, t_point player_vel, t_cape* cape);
+t_point		world_point_to_rend_point(t_point point);
+t_point		point_add(t_point a, t_point b);
+t_point		point_sub(t_point a, t_point b);
 #endif
