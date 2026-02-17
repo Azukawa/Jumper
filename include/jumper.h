@@ -128,17 +128,25 @@ typedef struct	s_jump{
 	t_cape		cape;
 }				t_jump;
 
-
+//		draw_pixel.c
 void		draw_pixel(uint32_t x, uint32_t y, t_buffer *buf, uint32_t color);
+//		draw_shapes.c
 void		draw_line(t_buffer *buf, t_point p0, t_point p1, uint32_t color);
 void		draw_circle(t_buffer *buf, t_point p, int r, uint32_t color);
 void		draw_filled_circle(t_buffer *buf, t_point p, int r, uint32_t color);
 void		draw_square(t_point a, t_point b, t_buffer *buf, int color);
-int			ft_clamp(int min, int max, int nb);
+//		cape.c
 void		draw_cape(t_rend *rend, t_cape *cape, t_point camera);
 void		calculate_cape(t_point player_pos, t_point player_vel, t_cape* cape);
+//		graphics.c
+void		calculate_graphics(t_rend *rend, t_jump *jump);
+//	util.c
+int			ft_clamp(int min, int max, int nb);
 t_point		world_point_to_rend_point(t_point point);
 t_point		point_add(t_point a, t_point b);
 t_point		point_sub(t_point a, t_point b);
-void		calculate_graphics(t_rend *rend, t_jump *jump);
+int 		approach(int current_velo, int target_velo, int step);
+void		getout(const char *s);
+void 		fps_counter(int ticks_this_frame);
+t_point		clamp_velocity(int top_velocity, t_point velocity);
 #endif
