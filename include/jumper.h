@@ -140,4 +140,5 @@ void		calculate_cape(t_point player_pos, t_point player_vel, t_cape* cape);
 t_point		world_point_to_rend_point(t_point point);
 t_point		point_add(t_point a, t_point b);
 t_point		point_sub(t_point a, t_point b);
+void		calculate_graphics(t_rend *rend, t_jump *jump);
 #endif

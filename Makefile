@@ -11,7 +11,8 @@ SRC_LIST =	main.c \
 		draw_pixel.c \
 		draw_shapes.c \
 		utils.c \
-		cape.c
+		cape.c \
+		graphics.c
 SRCS = $(addprefix $(SRC_DIR),$(SRC_LIST))
 OBJS = $(addprefix $(OBJ_DIR),$(SRC_LIST:.c=.o))
 
