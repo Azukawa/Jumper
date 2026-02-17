@@ -1,8 +1,10 @@
 #include "jumper.h"
 t_obj init_player();
 t_obj init_spear();
+void	init_cape(t_cape *cape, t_point player_pos);
 void	terrain_collision_x(t_obj *obj, t_map *map);
 void	terrain_collision_y(t_obj *obj, t_map *map);
+void	terrain_collision(t_obj *obj, t_map *map);
 
 void	getout(const char *s)
 {
@@ -89,6 +91,7 @@ static void	init(t_rend *renderer, t_jump *jump)
 	jump->spear  = init_spear();
 	jump->map	= init_map();
 
+		init_cape(&jump->cape, jump->player.pos);
 	renderer->run = TRUE;
 }
 
@@ -223,8 +226,7 @@ void	update_player_velocity(t_jump *jump, int speed, int top_velocity)
 	jump->player.vel.x = approach(jump->player.vel.x, target_speed.x, speed);
 }
 
-//	the + 8 moves the center of the world point to the center of the pixel,
-//	which helps to eliminate jitter
+//	the + 8 moves the center of the world point to the center of the pixel
 static inline t_point	world_point_to_rend_point(t_point point)
 {
 	t_point ret;
@@ -340,20 +342,8 @@ int64_t square_root(int64_t n)
     return result;
 }
 
-typedef struct s_link
-{
-	t_point pos;
-	bool	pinned;
-}				t_link;
 
-typedef struct s_cape
-{
-		t_point pos;
-		t_point old;
-		bool	pinned;
-}				t_cape;
-
-void		distance_constraint(t_cape *a, t_cape *b, int	desired_length)
+void		distance_constraint(t_link *a, t_link *b, int	desired_length)
 {
 	int64_t	solver_scale = 32;	// this is the resolution of simulation. Make in to define
 
@@ -387,7 +377,7 @@ void		distance_constraint(t_cape *a, t_cape *b, int	desired_length)
 	}
 }
 
-void	integrate_points(t_cape *cape, int cape_len)
+void	integrate_points(t_link *cape, int cape_len)
 {
 	int	gravity;
 	static int	sub_counter;
@@ -413,36 +403,33 @@ void	integrate_points(t_cape *cape, int cape_len)
 
 }
 
-void	init_cape(t_cape *cape, int cape_len, t_point player_pos)
+void	init_cape(t_cape *cape, t_point player_pos)
 {
-	for (int i = 0; i < cape_len; i++)
+	cape->cape_len = 30;
+	cape->rest_len = 32;
+	for (int i = 0; i < cape->cape_len; i++)
 	{
-		cape[i].pos = player_pos;
-		cape[i].old = player_pos;
-		cape[i].pinned = FALSE;
+		cape->link[i].pos		= player_pos;
+		cape->link[i].old		= player_pos;
+		cape->link[i].pinned	= FALSE;
 	}
 }
 
 //	replace magic numbers with constants
-void		cape(t_rend *rend, t_point player_pos, t_point player_vel, t_point camera)
+void		calculate_cape(t_point player_pos, t_point player_vel, t_cape* cape)
 {
-		static	t_cape cape[30];
-	int		cape_len = 30;
-	int iterations = 5;
-	int	rest_len = 32;
-	static int init;
-	if (!init)
-		init_cape(cape, cape_len, player_pos);
-	init++;
+	int			cape_len = cape->cape_len;
+	int			rest_len = cape->rest_len;
+	int 		iterations = 5;
 	int		j = 29;
 
 	if(abs(player_vel.x) > 16 || abs(player_vel.y) > 16)
 	{
 		while(j > 0)
 		{
-			cape[j].old = cape[j].pos;
-			cape[j] = cape[j - 1];
-			cape[j].pinned = TRUE;
+			cape->link[j].old = cape->link[j].pos;
+			cape->link[j] = cape->link[j - 1];
+			cape->link[j].pinned = TRUE;
 			j--;
 		}
 	}
@@ -451,21 +438,21 @@ void		cape(t_rend *rend, t_point player_pos, t_point player_vel, t_point camera)
 		j = 1;
 		while(j < cape_len)
 		{
-			cape[j].pinned = FALSE;
+			cape->link[j].pinned = FALSE;
 //			cape[j].old = cape[j].pos;
 			j++;
 		}
 	}
 
-	cape[0].pos = player_pos;
-	cape[0].old = player_pos;
-	cape[0].pinned = TRUE;
-	integrate_points(cape, cape_len);
-	if (!cape[1].pinned)
+	cape->link[0].pos = player_pos;
+	cape->link[0].old = player_pos;
+	cape->link[0].pinned = TRUE;
+	integrate_points(cape->link, cape_len);
+	if (!cape->link[1].pinned)
 	{
-   		cape[1].pos.x += (cape[0].pos.x - cape[1].pos.x) / 4;
-    	cape[1].pos.y += (cape[0].pos.y - cape[1].pos.y) / 4;
-		cape[1].old = cape[1].pos;
+   		cape->link[1].pos.x += (cape->link[0].pos.x - cape->link[1].pos.x) / 4;
+    	cape->link[1].pos.y += (cape->link[0].pos.y - cape->link[1].pos.y) / 4;
+		cape->link[1].old = cape->link[1].pos;
 	}
 	
 	for(int iter_i = 0; iter_i < iterations; iter_i++)
@@ -473,15 +460,17 @@ void		cape(t_rend *rend, t_point player_pos, t_point player_vel, t_point camera)
 		for(int i = 0; i < cape_len - 1; i++)
 		{
 	//		cape[i + 1].pinned = FALSE;
-			distance_constraint(&cape[i], &cape[i + 1], rest_len);
+			distance_constraint(&cape->link[i], &cape->link[i + 1], rest_len);
 		}
 	}
+}
 
-	for(int i = 0; i < cape_len - 1; i++)
+void	draw_cape(t_rend *rend, t_cape *cape, t_point camera)
+{
+	for(int i = 0; i < cape->cape_len - 1; i++)
 	{
-		draw_line(rend->win_buffer, world_point_to_rend_point(point_sub(cape[i].pos, camera)), world_point_to_rend_point(point_sub(cape[i +1].pos, camera)), 0xFFFF0000);
+		draw_line(rend->win_buffer, world_point_to_rend_point(point_sub(cape->link[i].pos, camera)), world_point_to_rend_point(point_sub(cape->link[i +1].pos, camera)), 0xFFFF0000);
 	}
-//	draw_circle(rend->win_buffer, world_point_to_rend_point(point_sub(cape[29].pos, camera)), 8, 0xFFFFFFFF);	
 }
 
 // Change logic for input detection once fresh_press and press_press for keyevents is implemented
@@ -581,8 +570,9 @@ void	spear_logic(t_jump *jump)
 		jump->spear.vel		= gravity(jump->spear.vel);
 	jump->spear.pos			= point_add(jump->spear.pos, jump->spear.vel);
 //							  collision(&jump->spear);
-							terrain_collision_x(&jump->spear, &jump->map);
-							terrain_collision_y(&jump->spear, &jump->map);
+						//	terrain_collision_x(&jump->spear, &jump->map);
+						//	terrain_collision_y(&jump->spear, &jump->map);
+							terrain_collision(&jump->spear, &jump->map);
 }
 
 void	draw_spear(t_rend *rend, t_obj *spear, t_camera *camera)
@@ -654,7 +644,6 @@ void	terrain_collision_x(t_obj *obj, t_map *map)
 			obj->vel.x = -(obj->vel.x >> 1);
 		obj->pos.x = a.x - half_obj_w;
 	}
-//	printf("x = %d\ty = %d\tpos.x = %d\tpos.y = %d\n", x, y, obj->pos.x, obj->pos.y);
 }
 
 //	player needs hitbox
@@ -697,13 +686,18 @@ void	terrain_collision_y(t_obj *obj, t_map *map)
 	}
 }
 
+void	terrain_collision(t_obj *obj, t_map *map)
+{
+		terrain_collision_x(obj, map);
+		terrain_collision_y(obj, map);
+}
+
 void	player_logic(t_jump *jump, int accel, int top_velocity)
 {
 	update_player_velocity(jump, accel, top_velocity);
 	jump->player.vel		= gravity(jump->player.vel);
 	jump->player.pos 		= point_add(jump->player.pos, jump->player.vel);
-	terrain_collision_x(&jump->player, &jump->map);
-	terrain_collision_y(&jump->player, &jump->map);
+	terrain_collision(&jump->player, &jump->map);
 }
 
 t_point	camera_follow(t_point pos, t_camera camera)
@@ -741,23 +735,26 @@ void	update_camera(t_obj *player, t_camera *camera)
 	camera->pos = point_sub(camera->pos, camera->vel);
 }
 
-void	game_logic(t_rend *rend, t_jump *jump)
+void	game_logic(t_jump *jump)
 {
-//	int		accel				= 2;
-//	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
 	int		accel				= 2;
 	int		top_velocity		= 96; // this should be divideble by accel to avoid stutter
 
 	player_logic(jump, accel, top_velocity);
 	spear_logic(jump);
-
 	update_camera(&jump->player, &jump->camera);
 
-//	draw_player(rend, &jump->player, &jump->camera);
-//	draw_terrain(rend, &jump->map, &jump->camera.pos);	
-	cape(rend, jump->player.pos, jump->player.vel, jump->camera.pos);
-//	draw_spear(rend, &jump->spear, &jump->camera);
+	calculate_cape(jump->player.pos, jump->player.vel, &jump->cape);
 	clear_input_masks(&jump->fresh_keys, &jump->press_keys);
+}
+
+void	calculate_graphics(t_rend *rend, t_jump *jump)
+{
+
+		draw_player(rend, &jump->player, &jump->camera);
+		draw_terrain(rend, &jump->map, &jump->camera.pos);	
+		draw_spear(rend, &jump->spear, &jump->camera);
+		draw_cape(rend, &jump->cape, jump->camera.pos);
 }
 
 static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
@@ -783,17 +780,13 @@ static void	loop(t_rend *rend, SDL_Event *e, t_jump *jump)
    	while (accumulator >= tick_duration)
 	{
 		bzero(rend->win_buffer->pixels, LOGIC_H * LOGIC_W * sizeof(uint32_t));
-		game_logic(rend, jump);
+		game_logic(jump);
 		accumulator -= tick_duration;
 		new_ticks++;
 	}
 	if(new_ticks != 0)
 	{
-		draw_player(rend, &jump->player, &jump->camera);
-		draw_terrain(rend, &jump->map, &jump->camera.pos);	
-	//	cape(rend, jump->player.pos, jump->player.vel, jump->camera.pos);
-		draw_spear(rend, &jump->spear, &jump->camera);
-
+		calculate_graphics(rend, jump);
 		draw_2_window(rend);
 	}
 	fps_counter(new_ticks);

@@ -43,7 +43,7 @@
 
 	
 typedef struct s_buffer {
-	uint32_t		*pixels;
+	uint32_t	*pixels;
 	int			w;
 	int			h;
 	int			pitch;
@@ -76,9 +76,6 @@ typedef struct	s_map
 	int		tile_world_size;
 	t_point	tile_size;
 	t_point	map_origo;
-
-
-
 }				t_map;
 
 typedef struct	s_obj{
@@ -97,6 +94,23 @@ typedef struct	s_obj{
 	int			max_jumps;	//	Maximum jumps available,	Used for player
 }				t_obj;
 
+
+typedef struct	s_link
+{
+		t_point pos;
+		t_point old;
+		bool	pinned;
+}				t_link;
+
+typedef struct	s_cape
+{
+	t_link	link[30];
+	int		cape_len;
+	int		rest_len;
+
+
+}				t_cape;
+
 typedef struct	s_camera
 {
 	t_point		pos;
@@ -111,6 +125,7 @@ typedef struct	s_jump{
 	t_obj		spear;
 	t_map		map;
 	t_camera	camera;
+	t_cape		cape;
 }				t_jump;
 
 
